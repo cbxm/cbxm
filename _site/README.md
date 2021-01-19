@@ -1,3 +1,0 @@
-# Blog
-
-[flavor flav.jpg]
