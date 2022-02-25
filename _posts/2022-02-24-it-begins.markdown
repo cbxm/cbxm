@@ -4,7 +4,7 @@ title:  "hello frens!"
 date:   2022-2-24 19:14:00 -0700
 ---
 
-| guess what! 
+> guess what! 
 
 ## i'm writing again!
 
