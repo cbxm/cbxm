@@ -4,8 +4,3 @@
 
 layout: home
 ---
-
-# hi, i'm Caden. 
-
-### welcome.
-
