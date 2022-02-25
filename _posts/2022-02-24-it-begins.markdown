@@ -1,11 +1,13 @@
 ---
 layout: post
-title:  "hello fren."
+title:  "hello frens!"
 date:   2022-2-24 19:14:00 -0700
 ---
 
-# guess what, i'm writing again.
+# guess what! 
+
+## i'm writing again!
 
 so the rest of you are gonna need to do me a favor and
 
-| ***keep up.***
+| also do that pls
