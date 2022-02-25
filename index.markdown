@@ -5,6 +5,7 @@
 layout: home
 ---
 
-# Funky fresh holla in the place to *be!*
+# hi, i'm Caden. 
 
+### welcome.
 
