@@ -37,7 +37,7 @@ remote_theme: riggraz/no-style-please
 theme_config:
   appearance: "light"
   back_home_text: "< back"
-  date_format: "%A, %B %-d, '%y"
+  date_format: "-%a, %b %-d '%y- "
   show_description: true
 
 plugins:
