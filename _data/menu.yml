@@ -5,10 +5,9 @@
 entries:
   - title: "read more about <a href='https://blog.cbxm.me/me/'>me</a>."
   - title: "i'm also on the bird app. <a href='https://twitter.com/_cbxm_'>hmu</a>."
-
   - title: latest papers
     post_list:
-            limit: 5
+      limit: 5
       show_more: true
       show_more_text: flip open the binder...
       show_more_url: three_ring.html
