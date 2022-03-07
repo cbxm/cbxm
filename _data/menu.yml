@@ -3,14 +3,12 @@
 
 
 entries:
-  - title: i'm also on the bird app.
-    entries:
-    - title: hmu.
-      url: https://twitter.com/_cbxm_
-  
+  - title: read more about <a href=''>me.</a>
+  - title: i'm also on the <a href='https://twitter.com/_cbxm_'>bird app</a>.
+
   - title: latest papers
     post_list:
-      limit: 10
+            limit: 5
       show_more: true
       show_more_text: flip open the binder...
       show_more_url: three_ring.html
