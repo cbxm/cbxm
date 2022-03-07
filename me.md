@@ -4,4 +4,4 @@ title:  "me"
 permalink: /me/
 ---
 
-yeah, i haven't filled this out yet.
+i write about org design, vibes, life, and whatever i feel like, really. enjoy your stay. ♥
