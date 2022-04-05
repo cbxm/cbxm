@@ -1,0 +1,24 @@
+---
+layout: post
+title:  "stories"
+date:   2022-04-04 21:16:00 -0700
+published: true
+---
+
+humans are driven by story. a long time ago, we developed language, and it changed us forever. from that moment on, we were no longer bound by what we could see, feel, or sense, and instead we collectively entered a world where our limits were something else entirely: concepts.
+
+stories give us the power to step into something beyond what we know. 
+
+we usually think of this power as something that we wield. we think of stories as something that we craft, and choose to participate in.
+
+but over thousands of years, some stories have become even more than this. they've stepped beyond what we can grasp in our own minds, and have woven themselves into the essence of our physical bodies. they take on a life and a consciousness of their own, saturating the social fabric that we surround ourselves with.
+
+much like being trapped in a blanket, we try to make sense of what's happening around us. we grab fistfuls of it and we say "THIS is the blanket." we tell ourselves that the patch we're able to grab IS the blanket, and we describe that patch, because we think understanding the parts will help us understand the whole.
+
+as we struggle and fight against this covering, we only entangle ourselves more and more, eventually becoming so tightly bound by it that even the patches we are able to grasp begin to lose their sense. and—despite our own perception of the circumstances—to the outside observer, we are indistinguishable from the very thing we are struggling against.
+
+but when we relax—when we choose to let go—the bonds loosen, too. 
+
+if we can allow ourselves a moment to be bundled in the stories that were crafted long before we had the nerve to reject them, then we can actually enjoy their warmth, instead of feeling smothered by their proximity.
+
+and maybe—*just maybe*—we can let them fall off of us entirely, and choose a new quilt of our own design.
