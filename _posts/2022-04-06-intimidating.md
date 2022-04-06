@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "intimidating"
+title:  "intimidating."
 date:   2022-04-06 05:46:00 -0600
 published: true
 ---
