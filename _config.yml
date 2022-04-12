@@ -26,6 +26,7 @@ url: "https://blog.cbxm.me/" # the base hostname & protocol for your site, e.g. 
 twitter_username: _cbxm_
 github_username:  cbxm
 
+
 # Build settings
 # remote_theme: riggraz/no-style-please
 remote_theme: cbxm/dark-style-please
