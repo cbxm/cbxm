@@ -29,7 +29,7 @@ but when we’re faced with the things that matter, it’s so important that we 
 
 it’s so important that muster the courage to be vulnerable. that we risk injury and heartbreak.
 
-***it’s so important*** that we stand in the open, with our eyes open and our arms spread wide. 
+***it’s so important*** that we stand where we are visible, with our eyes open and our arms spread wide. 
 
 because this is not a war.
 
