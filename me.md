@@ -20,6 +20,4 @@ plus:
 
 and, uh, *why yes i **do*** have an [open Calendly](https://calendly.com/cbxm/30min). 
 
-hit me with that 30 minutes, boo. 
-
-😘
+hit me with that 30 minutes, boo. 😘
