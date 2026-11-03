@@ -24,8 +24,6 @@ export interface SkyFix {
   facing: number;
   /** The sun's altitude in degrees. */
   alt: number;
-  /** The sun's azimuth in degrees clockwise from north. */
-  az: number;
 }
 
 /**
@@ -131,32 +129,35 @@ export function lightSky(rereadTheme = false): SkyFix {
   const tilt = (23.439 - 3.6e-7 * d) * RAD;
   const ra = Math.atan2(Math.cos(tilt) * Math.sin(ecliptic), Math.cos(ecliptic));
   const dec = Math.asin(Math.sin(tilt) * Math.sin(ecliptic));
-  const hourAngle = (280.46061837 + 360.98564736629 * d + lon) * RAD - ra;
+  const sidereal = (280.46061837 + 360.98564736629 * d + lon) * RAD;
+  const hourAngle = sidereal - ra;
   const phi = lat * RAD;
   const alt =
     Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(hourAngle)) / RAD;
-  const az =
-    (Math.atan2(
-      -Math.sin(hourAngle) * Math.cos(dec),
-      Math.sin(dec) * Math.cos(phi) - Math.cos(dec) * Math.sin(phi) * Math.cos(hourAngle),
-    ) /
-      RAD +
-      360) %
-    360;
   const rising = Math.sin(hourAngle) < 0;
   root.dataset.facing ??= dec / RAD < lat ? '180' : '0';
   const facing = Number(root.dataset.facing);
+
+  // The ecliptic's rising point, where it crosses the eastern horizon; sky.ts draws the half of
+  // the ecliptic from there to its setting point, and the sun's glow sits where it is in that span.
+  const east = Math.sin(sidereal) * Math.sin(tilt) * Math.sin(phi) + Math.cos(tilt) * Math.cos(phi) < 0 ? -1 : 1;
+  const ascendant = Math.atan2(
+    east * Math.cos(sidereal),
+    -east * (Math.sin(tilt) * Math.tan(phi) + Math.cos(tilt) * Math.sin(sidereal)),
+  );
+  const past = ((((ascendant - ecliptic) / RAD) % 360) + 360) % 360;
+  const across = (past > 270 ? past - 360 : past) / 180;
+  const sunX = Math.min(1.2, Math.max(-0.2, across));
 
   const dynamic = theme === 'dynamic';
   const low = dynamic ? unit((8 - alt) / 12) : theme === 'dark' ? 1 : 0;
   const deep = dynamic ? unit((-4 - alt) / 12) : theme === 'dark' ? 1 : 0;
   const glow = dynamic ? unit(Math.min((14 - alt) / 14, (alt + 16) / 12)) : 0;
-  const ahead = ((((az - facing) % 360) + 540) % 360) - 180;
   root.style.setProperty('--low', low.toFixed(3));
   root.style.setProperty('--deep', deep.toFixed(3));
   root.style.setProperty('--glow', glow.toFixed(3));
   root.style.setProperty('--sunset', (theme === 'light' ? 0 : unit(1 - alt / 20)).toFixed(3));
-  root.style.setProperty('--sun-x', Math.min(1.2, Math.max(-0.2, 0.5 + ahead / 180)).toFixed(3));
+  root.style.setProperty('--sun-x', (facing === 180 ? sunX : 1 - sunX).toFixed(3));
   root.style.setProperty('--rising', rising ? '1' : '0');
   if (!root.style.getPropertyValue('--sky-clock'))
     root.style.setProperty('--sky-clock', String(Math.round(Date.now() / 1000) % 3600));
@@ -171,5 +172,5 @@ export function lightSky(rereadTheme = false): SkyFix {
       .padStart(2, '0');
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', `#${channel(0)}${channel(2)}${channel(4)}`);
 
-  return { theme, date, lat, lon, facing, alt, az };
+  return { theme, date, lat, lon, facing, alt };
 }
