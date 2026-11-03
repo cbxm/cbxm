@@ -14,6 +14,18 @@ const CODE = /^(```|~~~)[\s\S]*?^\1|`[^`\n]*`/gm;
 
 const isDraft = (/** @type {string} */ source) => /^draft:\s*true\s*$/m.test(source.split(/^---\s*$/m)[1] ?? '');
 
+/** The raw `[[...]]` targets in a piece's source, ignoring code. */
+const rawTargets = (/** @type {string} */ source) =>
+  new Set([...source.replace(CODE, '').matchAll(WIKILINK)].map((m) => m[1]));
+
+/**
+ * Slugs of the pieces a piece's source links to, each once. Whether those pieces exist is the caller's
+ * concern.
+ *
+ * @param {string} source
+ */
+export const linkTargets = (source) => [...new Set([...rawTargets(source)].map((t) => slugify(t.split('#')[0])))];
+
 /**
  * Sätteri plugin: with `features.wikilinks` on, `[[a piece title]]` parses as a link whose url is the raw
  * target. Points those links at `/ander/<slug>`. Only urls that appear as a `[[...]]` target outside code
@@ -26,7 +38,7 @@ const isDraft = (/** @type {string} */ source) => /^draft:\s*true\s*$/m.test(sou
  * @param {{ source: string }} ctx
  */
 export function wikilinks({ source }) {
-  const targets = new Set([...source.replace(CODE, '').matchAll(WIKILINK)].map((m) => m[1]));
+  const targets = rawTargets(source);
   if (targets.size === 0) return null;
   const fromDraft = isDraft(source);
   return {

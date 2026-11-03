@@ -15,31 +15,40 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
     </div>
 
     <section class="index" aria-labelledby="index-title">
-      <h1 id="index-title">meander</h1>
-      <p class="hint">
-        <span class="hint-list">Everything planted here so far, newest first.</span>
-        <span class="hint-map" aria-hidden="true">Drag to wander. The bigger the plant, the further along the piece.</span>
-      </p>
-      <ol class="pieces">
-        {
-          pieces.map((piece) => (
-            <li id={piece.id} data-slug={piece.id}>
-              <a href={pieceHref(piece)}>
-                <span class="glyph">
-                  <Plant stage={piece.data.stage} height="1.5em" />
-                </span>
-                <span class="title">{piece.data.title}</span>
-              </a>
-              <p class="meta">
-                <span>{piece.data.stage}</span>
-                <span aria-hidden="true">·</span>
-                <time datetime={piece.data.date.toISOString().slice(0, 10)}>{dateFormat.format(piece.data.date)}</time>
-              </p>
-              {piece.data.description && <p class="description">{piece.data.description}</p>}
-            </li>
-          ))
-        }
-      </ol>
+      <div class="index-head">
+        <h1 id="index-title">meander</h1>
+        <button class="fold" type="button" aria-label="hide the list" aria-expanded="true" aria-controls="index-body">
+          <svg class="chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+            <path d="M2.5 7.75 6 4.25l3.5 3.5" />
+          </svg>
+        </button>
+      </div>
+      <div class="index-body" id="index-body">
+        <p class="hint">
+          <span class="hint-list">Everything planted here so far, newest first.</span>
+          <span class="hint-map" aria-hidden="true">Drag to wander. The bigger the plant, the further along the piece.</span>
+        </p>
+        <ol class="pieces">
+          {
+            pieces.map((piece) => (
+              <li id={piece.id} data-slug={piece.id}>
+                <a href={pieceHref(piece)}>
+                  <span class="glyph">
+                    <Plant stage={piece.data.stage} height="1.5em" />
+                  </span>
+                  <span class="title">{piece.data.title}</span>
+                </a>
+                <p class="meta">
+                  <span>{piece.data.stage}</span>
+                  <span aria-hidden="true">·</span>
+                  <time datetime={piece.data.date.toISOString().slice(0, 10)}>{dateFormat.format(piece.data.date)}</time>
+                </p>
+                {piece.data.description && <p class="description">{piece.data.description}</p>}
+              </li>
+            ))
+          }
+        </ol>
+      </div>
     </section>
   </div>
 </Base>
@@ -56,9 +65,21 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
     padding: var(--space-4) var(--gutter) var(--space-6);
   }
 
+  .index-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
   h1 {
     font-size: var(--text-xl);
     font-style: italic;
+  }
+
+  /* Folding the legend away is for the map view only. */
+  .fold {
+    display: none;
   }
 
   .hint {
@@ -164,8 +185,55 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
       backdrop-filter: blur(3px);
     }
 
+    :global(html[data-js]) .index.is-folded {
+      width: max-content;
+    }
+
+    :global(html[data-js]) .is-folded .index-body {
+      display: none;
+    }
+
     :global(html[data-js]) h1 {
       font-size: var(--text-lg);
+    }
+
+    :global(html[data-js]) .fold {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 1.75rem;
+      height: 1.75rem;
+      margin: -0.25rem -0.5rem -0.25rem 0;
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius);
+      background: none;
+      color: var(--ink-faint);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    :global(html[data-js]) .fold:hover {
+      color: var(--accent);
+    }
+
+    .chevron {
+      width: 0.8rem;
+      height: 0.8rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Only turns once the reader folds or unfolds it, not when a remembered state is restored. */
+    .is-turning .chevron {
+      transition: rotate 0.25s var(--ease-out);
+    }
+
+    .is-folded .chevron {
+      rotate: 180deg;
     }
 
     :global(html[data-js]) .hint {

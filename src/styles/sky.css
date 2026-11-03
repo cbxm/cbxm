@@ -1,0 +1,191 @@
+/*
+ * The sky behind every page (Base.astro's .sky, filled by src/scripts/sky.ts). It shows only
+ * once lightSky() has set data-sky, so without JavaScript the page is plain paper.
+ */
+
+.sky {
+  display: none;
+}
+
+html[data-sky] .sky {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 55% 38% at calc(var(--sun-x) * 100%) 100%,
+      color-mix(in oklab, var(--glow-color) calc(var(--glow) * 85%), transparent),
+      transparent
+    ),
+    linear-gradient(to top, color-mix(in oklab, var(--glow-color) calc(var(--glow) * 45%), transparent), transparent 40%),
+    linear-gradient(to bottom, var(--sky-top), transparent 60%);
+}
+
+.sky-bodies,
+.sky-twinkles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
+}
+
+.sky-lines line {
+  stroke: var(--star-line);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+.sky-twinkle {
+  position: absolute;
+  width: calc(2 * var(--r));
+  height: calc(2 * var(--r));
+  translate: -50% -50%;
+}
+
+.sky-twinkle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--tint);
+  box-shadow: 0 0 calc(2.5 * var(--r)) color-mix(in srgb, var(--tint) 45%, transparent);
+}
+
+.sky-planet {
+  stroke: currentColor;
+  stroke-opacity: 0.25;
+  stroke-width: 3;
+  fill: currentColor;
+}
+
+.sky-planet--mercury {
+  color: #d8cfc0;
+}
+
+.sky-planet--venus {
+  color: #fff8e6;
+}
+
+.sky-planet--mars {
+  color: #f08a5d;
+}
+
+.sky-planet--jupiter {
+  color: #f6e7c8;
+}
+
+.sky-planet--saturn {
+  color: #ead39c;
+}
+
+.sky-sun-glow {
+  fill: url(#sky-sun-glow);
+}
+
+#sky-sun-glow stop {
+  stop-color: var(--sun-glow);
+}
+
+.sky-sun-disc {
+  fill: var(--sun-disc);
+}
+
+.sky-moon-glow {
+  fill: url(#sky-moon-glow);
+}
+
+#sky-moon-glow stop {
+  stop-color: var(--moon-glow);
+}
+
+#sky-sun-glow stop:last-child,
+#sky-moon-glow stop:last-child {
+  stop-opacity: 0;
+}
+
+.sky-moon-dark {
+  fill: var(--moon-dark);
+}
+
+.sky-moon-lit {
+  fill: var(--moon-lit);
+}
+
+.sky-moon-rim {
+  fill: none;
+  stroke: var(--moon-rim);
+}
+
+/*
+ * Clouds by day and twilight. Each drifts across on its own period (--t, a divisor of an hour),
+ * offset by --sky-clock so a new page finds them where the last one left them.
+ */
+.cloud {
+  display: none;
+}
+
+html[data-sky] .cloud {
+  display: block;
+  position: absolute;
+  top: var(--y);
+  left: 0;
+  width: calc(20rem * var(--s));
+  height: calc(5.5rem * var(--s));
+  translate: var(--x) 0;
+  opacity: calc(0.85 - 0.35 * var(--low));
+  background:
+    radial-gradient(closest-side, var(--cloud) 40%, transparent) 8% 70% / 38% 62% no-repeat,
+    radial-gradient(closest-side, var(--cloud) 40%, transparent) 34% 30% / 40% 92% no-repeat,
+    radial-gradient(closest-side, var(--cloud) 40%, transparent) 62% 45% / 36% 80% no-repeat,
+    radial-gradient(closest-side, var(--cloud) 45%, transparent) 50% 85% / 92% 45% no-repeat;
+}
+
+html[data-sky='night'] .cloud {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-sky] .cloud {
+    animation: drift var(--t) linear infinite;
+    animation-delay: calc(-1s * var(--sky-clock) - var(--o));
+  }
+
+  .sky-twinkle::before {
+    animation: twinkle calc(3.2s + 0.5 * var(--phase)) ease-in-out infinite;
+    animation-delay: calc(-1 * var(--phase));
+  }
+}
+
+@keyframes drift {
+  from {
+    translate: calc(-20rem * var(--s)) 0;
+  }
+  to {
+    translate: 100vw 0;
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.55;
+  }
+  65% {
+    opacity: 0.9;
+  }
+}
+
+/* Piece pages (Piece.astro) read in a pool of lamplight at night. */
+html[data-sky='night'] .piece {
+  padding-bottom: var(--space-5);
+  background: radial-gradient(ellipse 120% 40rem at 50% 0, var(--lamp-light), var(--lamp));
+  box-shadow: 0 0 3rem 1.5rem var(--lamp);
+}

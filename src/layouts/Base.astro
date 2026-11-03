@@ -1,5 +1,7 @@
 ---
 import '../styles/global.css';
+import { findPlace, lightSky } from '../scripts/sky-light';
+import { zonesVersion } from '../lib/zones';
 
 interface Props {
   title?: string;
@@ -13,6 +15,14 @@ const pageTitle = title ? `${title} · cbxm` : 'cbxm';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const path = Astro.url.pathname;
 const inGarden = path === '/ander' || path.startsWith('/ander/');
+
+// Before first paint: find the viewer's place (loading the zone table on a first visit), then
+// light the page, so a night visit never flashes the day palette. Two scripts, because a
+// script that findPlace() writes in runs after the script that wrote it.
+/** JS for an inline <script>, which must not contain its own end tag. */
+const inline = (js: string) => js.replace(/<\/script/gi, '<\\/script');
+const placeScript = inline(`document.documentElement.dataset.js = '';\n(${findPlace})('/sky-zones.js?v=${zonesVersion}', '${zonesVersion}');`);
+const lightScript = inline(`(${lightSky})();`);
 ---
 
 <!doctype html>
@@ -29,9 +39,15 @@ const inGarden = path === '/ander' || path.startsWith('/ander/');
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content={title ? 'article' : 'website'} />
     <meta name="theme-color" content="#f3ede1" />
-    <script is:inline>document.documentElement.dataset.js = '';</script>
+    <script is:inline set:html={placeScript} />
+    <script is:inline set:html={lightScript} />
   </head>
   <body class:list={{ 'full-bleed': fullBleed }}>
+    <div class="sky" aria-hidden="true">
+      <span class="cloud" style="--x: 8vw; --y: 9%; --s: 1.1; --t: 720s; --o: 0s"></span>
+      <span class="cloud" style="--x: 60vw; --y: 19%; --s: 0.8; --t: 600s; --o: 380s"></span>
+      <span class="cloud" style="--x: 34vw; --y: 31%; --s: 0.6; --t: 900s; --o: 610s"></span>
+    </div>
     <header class="site-header">
       <a class="wordmark" href="/" aria-label="cbxm, home">cbxm</a>
       <nav aria-label="Site">
@@ -52,6 +68,10 @@ const inGarden = path === '/ander' || path.startsWith('/ander/');
     }
   </body>
 </html>
+
+<script>
+  import '../scripts/sky';
+</script>
 
 <style>
   .site-header {

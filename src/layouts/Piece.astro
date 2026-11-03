@@ -1,13 +1,15 @@
 ---
 import Base from './Base.astro';
 import Plant from '../components/Plant.astro';
-import type { Piece } from '../lib/garden';
+import { pieceHref, type Piece } from '../lib/garden';
 
 interface Props {
   piece: Piece;
+  /** Pieces that link here. */
+  linkedFrom?: Piece[];
 }
 
-const { piece } = Astro.props;
+const { piece, linkedFrom = [] } = Astro.props;
 const { title, date, stage, description } = piece.data;
 const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 ---
@@ -28,6 +30,20 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long
       <slot />
     </div>
     <footer>
+      {
+        linkedFrom.length > 0 && (
+          <nav class="linked-from" aria-labelledby="linked-from">
+            <h2 id="linked-from">linked from</h2>
+            <ul>
+              {linkedFrom.map((p) => (
+                <li>
+                  <a href={pieceHref(p)}>{p.data.title}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
       <a href={`/ander#${piece.id}`}>&larr; back to the garden</a>
     </footer>
   </article>
@@ -77,5 +93,26 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long
 
   footer a:hover {
     color: var(--accent);
+  }
+
+  .linked-from {
+    margin-bottom: var(--space-4);
+  }
+
+  .linked-from h2 {
+    font-size: var(--text-sm);
+    font-weight: inherit;
+    letter-spacing: normal;
+    color: var(--ink-faint);
+  }
+
+  .linked-from ul {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-1);
+  }
+
+  .linked-from li + li {
+    margin-top: var(--space-1);
   }
 </style>
