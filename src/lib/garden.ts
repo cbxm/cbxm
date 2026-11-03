@@ -2,9 +2,9 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 
 export type Piece = CollectionEntry<'garden'>;
 
-/** All pieces, newest first. */
+/** All pieces, newest first. Drafts are included only in dev. */
 export async function getGarden(): Promise<Piece[]> {
-  const pieces = await getCollection('garden');
+  const pieces = await getCollection('garden', (piece) => import.meta.env.DEV || !piece.data.draft);
   return pieces.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 }
 
