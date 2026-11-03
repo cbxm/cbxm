@@ -4,7 +4,8 @@
  * stay self-contained: no imports and no references outside its own body.
  *
  * The viewer's place travels as data-place="lat lon" on <html>, and is saved in localStorage
- * under `sky-place` as { tz, place } so later pages skip the zone table.
+ * under `sky-place` as { tz, v, place } so later pages skip the zone table. `v` is the table's
+ * version (src/lib/zones.ts), so a deploy that changes the table looks every zone up again.
  */
 
 export interface SkyFix {
@@ -21,38 +22,50 @@ export interface SkyFix {
 }
 
 /**
- * Puts the place saved for this time zone on <html>. Without one (a first visit, or a new
- * zone), writes in `zonesUrl` as a blocking script, so only that page load pays for the table.
+ * Puts the place saved for this time zone and table `version` on <html>. Without one (a first
+ * visit, a new zone, or a new table), writes in `zonesUrl` as a blocking script, so only that
+ * page load pays for the table. Without working storage it does neither and lightSky()
+ * guesses, rather than block every page on the table.
  */
-export function findPlace(zonesUrl: string) {
+export function findPlace(zonesUrl: string, version: string) {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  let raw: string | null;
   try {
-    const saved = JSON.parse(localStorage.getItem('sky-place') ?? 'null');
-    if (saved && saved.tz === tz) {
-      if (saved.place) document.documentElement.dataset.place = saved.place;
-      return;
-    }
+    raw = localStorage.getItem('sky-place');
+    if (raw === null) localStorage.setItem('sky-place', '');
+  } catch {
+    return;
+  }
+  let saved;
+  try {
+    saved = JSON.parse(raw || 'null');
   } catch {}
+  if (saved && saved.tz === tz && saved.v === version) {
+    if (saved.place) document.documentElement.dataset.place = saved.place;
+    return;
+  }
   document.write('<script src="' + zonesUrl + '"></script>');
 }
 
 /**
  * Looks the browser's time zone up in `zones` (name → [lat, lon] of its principal city), puts it
- * on <html>, and saves it. A zone missing from the table is saved without a place, and lightSky()
- * guesses one.
+ * on <html>, and saves it with the table's `version`. A zone missing from the table is saved
+ * without a place, and lightSky() guesses one.
  */
-export function placeViewer(zones: Record<string, number[] | undefined>) {
+export function placeViewer(zones: Record<string, number[] | undefined>, version: string) {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const place = zones[tz]?.join(' ');
   if (place) document.documentElement.dataset.place = place;
   try {
-    localStorage.setItem('sky-place', JSON.stringify({ tz, place }));
+    localStorage.setItem('sky-place', JSON.stringify({ tz, v: version, place }));
   } catch {}
 }
 
 /**
  * Lights the page for where the sun is, at the place on <html> or a guess at 40°N on the time
- * zone's meridian. Sets on <html>:
+ * zone's meridian. The view's facing is decided on the first call and kept as data-facing, so a
+ * page left open while the sun's declination crosses the latitude doesn't mirror its sky. Sets
+ * on <html>:
  *
  * - `--low`: 0 with the sun 8° up, 1 at 4° down, where night begins
  * - `--deep`: 0 with the sun 4° down, 1 at 16° down
@@ -108,7 +121,8 @@ export function lightSky(): SkyFix {
       360) %
     360;
   const rising = Math.sin(hourAngle) < 0;
-  const facing = dec / RAD < lat ? 180 : 0;
+  root.dataset.facing ??= dec / RAD < lat ? '180' : '0';
+  const facing = Number(root.dataset.facing);
 
   const low = unit((8 - alt) / 12);
   const deep = unit((-4 - alt) / 12);

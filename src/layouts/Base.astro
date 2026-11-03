@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { findPlace, lightSky } from '../scripts/sky-light';
+import { zonesVersion } from '../lib/zones';
 
 interface Props {
   title?: string;
@@ -20,7 +21,7 @@ const inGarden = path === '/ander' || path.startsWith('/ander/');
 // script that findPlace() writes in runs after the script that wrote it.
 /** JS for an inline <script>, which must not contain its own end tag. */
 const inline = (js: string) => js.replace(/<\/script/gi, '<\\/script');
-const placeScript = inline(`document.documentElement.dataset.js = '';\n(${findPlace})('/sky-zones.js');`);
+const placeScript = inline(`document.documentElement.dataset.js = '';\n(${findPlace})('/sky-zones.js?v=${zonesVersion}', '${zonesVersion}');`);
 const lightScript = inline(`(${lightSky})();`);
 ---
 
