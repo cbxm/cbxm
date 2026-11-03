@@ -1,6 +1,6 @@
 ---
 import Plant from './Plant.astro';
-import { fieldBounds, pieceHref, plantVariation, type Piece } from '../lib/garden';
+import { fieldBounds, gardenLinks, pieceHref, plantVariation, type Piece } from '../lib/garden';
 
 interface Props {
   pieces: Piece[];
@@ -16,6 +16,14 @@ const originY = -bounds.top;
 // Lower plants are drawn later so they overlap the ones behind them.
 const planted = [...pieces].sort((a, b) => a.data.y - b.data.y);
 
+/** Stable pseudo-random numbers in [0, 1) from a 32-bit seed. */
+function stream(seed: number) {
+  return () => {
+    seed = (Math.imul(seed ^ (seed >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
+    return seed / 4294967296;
+  };
+}
+
 /**
  * Grass tufts and pebbles so the open ground has texture. One mark per cell of map
  * space, seeded by the cell's coordinates, so the ground stays put as the field grows.
@@ -25,11 +33,7 @@ function scatter() {
   const marks = [];
   for (let cx = Math.floor(bounds.left / CELL); cx * CELL < bounds.left + bounds.width; cx++) {
     for (let cy = Math.floor(bounds.top / CELL); cy * CELL < bounds.top + bounds.height; cy++) {
-      let seed = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
-      const rand = () => {
-        seed = (Math.imul(seed ^ (seed >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
-        return seed / 4294967296;
-      };
+      const rand = stream((Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0);
       marks.push({
         x: Math.round((cx + rand()) * CELL - bounds.left),
         y: Math.round((cy + rand()) * CELL - bounds.top),
@@ -42,6 +46,117 @@ function scatter() {
   return marks;
 }
 const ground = scatter();
+
+type Point = { x: number; y: number };
+const fmt = (p: Point) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+const midpoint = (p: Point, q: Point) => ({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
+
+/** A smooth path through `points`, curving through the midpoints between them. */
+function smooth(points: Point[]) {
+  let d = `M${fmt(points[0])}`;
+  for (let i = 1; i < points.length - 1; i++) d += ` Q${fmt(points[i])} ${fmt(midpoint(points[i], points[i + 1]))}`;
+  return `${d} L${fmt(points[points.length - 1])}`;
+}
+
+/** The outline of a line along `spine` whose half-width at fraction t of the way along is `halfWidth(t)`. */
+function ribbon(spine: Point[], halfWidth: (t: number) => number) {
+  const last = spine.length - 1;
+  const left: Point[] = [];
+  const right: Point[] = [];
+  spine.forEach((p, i) => {
+    const prev = spine[Math.max(0, i - 1)];
+    const next = spine[Math.min(last, i + 1)];
+    const len = Math.hypot(next.x - prev.x, next.y - prev.y) || 1;
+    const nx = -(next.y - prev.y) / len;
+    const ny = (next.x - prev.x) / len;
+    const w = halfWidth(i / last);
+    left.push({ x: p.x + nx * w, y: p.y + ny * w });
+    right.push({ x: p.x - nx * w, y: p.y - ny * w });
+  });
+  return `${smooth(left)} ${smooth(right.reverse()).replace(/^M/, 'L')} Z`;
+}
+
+/**
+ * A root joining two plant bases underground: a gnarled arc, thickest where it leaves each plant and
+ * thinnest where the two meet, with short rootlets branching off toward the middle. Seeded by `key`, so a
+ * pair keeps its shape from build to build. Returns one path; every outline winds the same way, so the
+ * rootlets fill as part of the root.
+ */
+function root(a: Point, b: Point, key: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+  const rand = stream(hash >>> 0);
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy);
+  const bow = (0.08 + rand() * 0.12) * length * (rand() < 0.5 ? -1 : 1);
+  const c = { x: (a.x + b.x) / 2 - (dy / length) * bow, y: (a.y + b.y) / 2 + (dx / length) * bow };
+  const slow = { waves: Math.max(1, Math.round(length / 160)), phase: rand() * 2 * Math.PI, size: 3 + rand() * 3 };
+  const quick = { waves: Math.max(2, Math.round(length / 45)), phase: rand() * 2 * Math.PI, size: 0.8 + rand() * 0.8 };
+
+  /** The point at `t` along the arc, bent off it; the ends stay on the plants. */
+  const at = (t: number) => {
+    const u = 1 - t;
+    const tx = 2 * u * (c.x - a.x) + 2 * t * (b.x - c.x);
+    const ty = 2 * u * (c.y - a.y) + 2 * t * (b.y - c.y);
+    const n = Math.hypot(tx, ty);
+    const bend =
+      Math.sin(Math.PI * t) *
+      (slow.size * Math.sin(2 * Math.PI * slow.waves * t + slow.phase) +
+        quick.size * Math.sin(2 * Math.PI * quick.waves * t + quick.phase));
+    return {
+      x: u * u * a.x + 2 * u * t * c.x + t * t * b.x - (ty / n) * bend,
+      y: u * u * a.y + 2 * u * t * c.y + t * t * b.y + (tx / n) * bend,
+      angle: Math.atan2(ty, tx),
+    };
+  };
+  /** Half the root's width: about 3px wide at each plant, under 1px where the two halves meet. */
+  const thickness = (t: number) => 0.4 + 1.2 * Math.abs(2 * t - 1) ** 1.6;
+
+  const steps = Math.max(8, Math.round(length / 9));
+  const spine = Array.from({ length: steps + 1 }, (_, i) => at(i / steps));
+  let d = ribbon(spine, thickness);
+
+  const count = Math.max(2, Math.round(length / 55));
+  for (let i = 0; i < count; i++) {
+    const t = 0.08 + (0.84 * (i + 0.2 + rand() * 0.6)) / count;
+    const p = at(t);
+    // Rootlets lean away from the plant they grow from, toward where the root thins.
+    const ahead = t < 0.5 ? 0 : Math.PI;
+    const side = rand() < 0.5 ? 1 : -1;
+    const angle = p.angle + ahead + side * (0.5 + rand() * 0.6);
+    const reach = 6 + rand() * 12;
+    const curl = side * (rand() - 0.3) * reach * 0.4;
+    const tip = { x: p.x + Math.cos(angle) * reach, y: p.y + Math.sin(angle) * reach };
+    const bendAt = {
+      x: (p.x + tip.x) / 2 - Math.sin(angle) * curl,
+      y: (p.y + tip.y) / 2 + Math.cos(angle) * curl,
+    };
+    const twig = [0, 1 / 3, 2 / 3, 1].map((s) => ({
+      x: (1 - s) ** 2 * p.x + 2 * (1 - s) * s * bendAt.x + s * s * tip.x,
+      y: (1 - s) ** 2 * p.y + 2 * (1 - s) * s * bendAt.y + s * s * tip.y,
+    }));
+    const base = thickness(t) * 0.8;
+    d += ` ${ribbon(twig, (s) => base * (1 - s) + 0.1)}`;
+  }
+
+  return d;
+}
+
+/** One root per linked pair, whichever way the links run. */
+const roots = (() => {
+  const base = new Map(pieces.map((p) => [p.id, { x: originX + p.data.x, y: originY + p.data.y }]));
+  const grown = new Set<string>();
+  return gardenLinks(pieces).flatMap((link) => {
+    const [a, b] = [link.from, link.to].sort();
+    const key = `${a} ${b}`;
+    if (grown.has(key)) return [];
+    grown.add(key);
+    return [{ ...link, d: root(base.get(a)!, base.get(b)!, key) }];
+  });
+})();
+
 const Tag = interactive ? 'a' : 'span';
 ---
 
@@ -51,6 +166,17 @@ const Tag = interactive ? 'a' : 'span';
   data-origin-x={originX}
   data-origin-y={originY}
 >
+  <svg class="roots" width={bounds.width} height={bounds.height} aria-hidden="true">
+    {
+      roots.map((r) => (
+        <g class="root" data-from={r.from} data-to={r.to}>
+          <path class="root-glow" d={r.d} />
+          <path class="root-body" d={r.d} />
+        </g>
+      ))
+    }
+  </svg>
+
   <svg class="ground" width={bounds.width} height={bounds.height} aria-hidden="true">
     {
       ground.map((g) =>
@@ -94,6 +220,39 @@ const Tag = interactive ? 'a' : 'span';
     background-image: radial-gradient(circle, rgb(42 37 31 / 0.07) 1px, transparent 1.6px);
     background-size: 56px 56px;
     background-position: calc(var(--origin-x) - 28px) calc(var(--origin-y) - 28px);
+  }
+
+  .roots {
+    position: absolute;
+    inset: 0;
+    max-width: none;
+    pointer-events: none;
+  }
+
+  .root {
+    opacity: 0.4;
+    transition: opacity 0.3s;
+  }
+
+  .root-body {
+    fill: var(--bark);
+  }
+
+  .root-glow {
+    fill: none;
+    stroke: var(--accent-soft);
+    stroke-width: 7;
+    stroke-linejoin: round;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .root.is-lit {
+    opacity: 0.95;
+  }
+
+  .root.is-lit .root-glow {
+    opacity: 1;
   }
 
   .ground {
@@ -159,11 +318,17 @@ const Tag = interactive ? 'a' : 'span';
     line-height: 1.25;
     text-align: center;
     text-wrap: balance;
+    /* Keeps the label legible where roots run beneath it. */
+    text-shadow:
+      0 0 2px var(--paper),
+      0 0 4px var(--paper),
+      0 0 8px var(--paper);
     transition: color 0.25s;
   }
 
   a.sprig:hover,
-  .sprig.is-lit {
+  .sprig.is-lit,
+  .sprig.is-kin {
     color: var(--ink);
   }
 

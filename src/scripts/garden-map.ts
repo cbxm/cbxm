@@ -1,8 +1,9 @@
 /**
  * Behavior for the /ander map: open centered on the origin (or on the plant
- * named in the URL hash), drag to pan with momentum, and keep the legend and the
- * plants pointing at each other. The map is a native scroll container, so
- * trackpads, wheels and touch scroll it without any help from here.
+ * named in the URL hash), drag to pan with momentum, keep the legend and the
+ * plants pointing at each other, and light a plant's roots and the plants they
+ * reach. The map is a native scroll container, so trackpads, wheels and touch
+ * scroll it without any help from here.
  */
 
 const DRAG_THRESHOLD = 4;
@@ -11,6 +12,8 @@ const FRICTION = 0.92;
 const GLIDE_CUTOFF = 80;
 /** A plant's anchor is its base; aim this far above it so the plant and label both show. */
 const PLANT_AIM = 40;
+/** localStorage key for whether the legend is folded. */
+const FOLDED_KEY = 'cbxm:legend-folded';
 
 export function plantGardenMap() {
   const map = document.querySelector<HTMLElement>('.map');
@@ -47,12 +50,43 @@ export function plantGardenMap() {
   const centerOnSprig = (sprig: HTMLElement, behavior: ScrollBehavior) =>
     centerOn(sprig.offsetLeft, sprig.offsetTop - PLANT_AIM, behavior);
 
-  let lit: HTMLElement | null = null;
+  const roots = [...field.querySelectorAll<SVGGElement>('.root')];
+
+  /** Light a plant, the roots joining it to others, and the plants at their other ends. */
   const light = (sprig: HTMLElement | null) => {
-    lit?.classList.remove('is-lit');
-    sprig?.classList.add('is-lit');
-    lit = sprig;
+    field.querySelectorAll('.is-lit, .is-kin').forEach((el) => el.classList.remove('is-lit', 'is-kin'));
+    const slug = sprig?.dataset.slug;
+    if (!sprig || !slug) return;
+    sprig.classList.add('is-lit');
+    for (const root of roots) {
+      const { from, to } = root.dataset;
+      if (from !== slug && to !== slug) continue;
+      root.classList.add('is-lit');
+      sprigFor(from === slug ? to : from)?.classList.add('is-kin');
+    }
   };
+
+  // The legend folds down to its title, and stays as the reader left it.
+  // Fold before the view is placed, so centering measures the legend as it will be.
+  const fold = legend?.querySelector<HTMLButtonElement>('.fold');
+  const setFolded = (folded: boolean) => {
+    legend?.classList.toggle('is-folded', folded);
+    fold?.setAttribute('aria-expanded', String(!folded));
+  };
+  try {
+    setFolded(localStorage.getItem(FOLDED_KEY) === 'true');
+  } catch {
+    // Storage can be unavailable (private windows, blocked site data); the legend just starts open.
+  }
+  fold?.addEventListener('click', () => {
+    const folded = fold.getAttribute('aria-expanded') === 'true';
+    setFolded(folded);
+    try {
+      localStorage.setItem(FOLDED_KEY, String(folded));
+    } catch {
+      // Not remembered this time.
+    }
+  });
 
   const placeView = () => {
     if (!wide.matches) return;
@@ -140,8 +174,10 @@ export function plantGardenMap() {
     { capture: true },
   );
 
-  // Remember which plant a reader left from, so returning to the map lands there.
   field.querySelectorAll<HTMLAnchorElement>('a.sprig').forEach((sprig) => {
+    sprig.addEventListener('pointerenter', () => light(sprig));
+    sprig.addEventListener('pointerleave', () => light(null));
+    // Remember which plant a reader left from, so returning to the map lands there.
     sprig.addEventListener('click', () => history.replaceState(null, '', `#${sprig.dataset.slug}`));
   });
 
