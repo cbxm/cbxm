@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+
+  /* Paper and ink */
+  --paper: #f3ede1;
+  --paper-light: #f8f4ec;
+  --paper-shade: #e9e0cf;
+  --ink: #2a251f;
+  --ink-soft: #5c5348;
+  --ink-faint: #8f8576;
+  --rule: rgb(42 37 31 / 0.14);
+  --accent: #a4532b;
+  --accent-soft: rgb(164 83 43 / 0.14);
+
+  /* Plants */
+  --leaf-light: #b3c592;
+  --leaf: #849f6b;
+  --leaf-deep: #4f6c53;
+  --bark: #7a5a3c;
+  --shadow: rgb(42 37 31 / 0.09);
+
+  /* Type */
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', 'URW Palladio L', P052, Georgia, serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text-sm: 0.875rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 2rem;
+  --text-2xl: 2.75rem;
+  --leading: 1.65;
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+  --space-7: 6rem;
+
+  --measure: 65ch;
+  --gutter: clamp(1.25rem, 5vw, 3rem);
+  --header-height: 4rem;
+  --radius: 3px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}

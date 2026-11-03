@@ -1,0 +1,15 @@
+{
+  "name": "cbxm-me",
+  "type": "module",
+  "private": true,
+  "packageManager": "bun@1.4.4",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^8.1.2",
+    "astro": "^7.4.5"
+  }
+}

@@ -1,0 +1,81 @@
+---
+import Base from './Base.astro';
+import Plant from '../components/Plant.astro';
+import type { Piece } from '../lib/garden';
+
+interface Props {
+  piece: Piece;
+}
+
+const { piece } = Astro.props;
+const { title, date, stage, description } = piece.data;
+const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+---
+
+<Base title={title} description={description}>
+  <article class="piece">
+    <header>
+      <p class="meta stage">
+        <Plant stage={stage} height="2.25rem" />
+        <span>{stage}</span>
+        <span aria-hidden="true">·</span>
+        <time datetime={date.toISOString().slice(0, 10)}>{dateFormat.format(date)}</time>
+      </p>
+      <h1>{title}</h1>
+      {description && <p class="dek">{description}</p>}
+    </header>
+    <div class="prose">
+      <slot />
+    </div>
+    <footer>
+      <a href={`/meander#${piece.id}`}>&larr; back to the garden</a>
+    </footer>
+  </article>
+</Base>
+
+<style>
+  .piece {
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding: var(--space-5) var(--gutter) 0;
+  }
+
+  header {
+    margin-bottom: var(--space-5);
+  }
+
+  .stage {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  h1 {
+    font-size: clamp(var(--text-xl), 5vw, var(--text-2xl));
+  }
+
+  .dek {
+    margin-top: var(--space-3);
+    font-size: var(--text-lg);
+    font-style: italic;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  footer {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--rule);
+    font-style: italic;
+  }
+
+  footer a {
+    text-decoration: none;
+    color: var(--ink-soft);
+  }
+
+  footer a:hover {
+    color: var(--accent);
+  }
+</style>

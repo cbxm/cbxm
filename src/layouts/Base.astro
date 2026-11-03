@@ -1,0 +1,121 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** On wide screens with JS, the page fills the viewport below the header and does not scroll (the map). */
+  fullBleed?: boolean;
+}
+
+const { title, description = 'A writing playground that grows.', fullBleed = false } = Astro.props;
+const pageTitle = title ? `${title} · cbxm` : 'cbxm';
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const path = Astro.url.pathname;
+const inGarden = path === '/meander' || path.startsWith('/meander/');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content={title ?? 'cbxm'} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content={title ? 'article' : 'website'} />
+    <meta name="theme-color" content="#f3ede1" />
+    <script is:inline>document.documentElement.dataset.js = '';</script>
+  </head>
+  <body class:list={{ 'full-bleed': fullBleed }}>
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="cbxm, home">cbxm</a>
+      <nav aria-label="Site">
+        <a href="/meander" aria-current={inGarden ? 'page' : undefined}>meander</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    {
+      !fullBleed && (
+        <footer class="site-footer">
+          <span>cbxm.me</span>
+          <span aria-hidden="true">·</span>
+          <span>still growing</span>
+        </footer>
+      )
+    }
+  </body>
+</html>
+
+<style>
+  .site-header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: var(--header-height);
+    padding: var(--space-3) var(--gutter);
+  }
+
+  .wordmark {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  nav a {
+    font-style: italic;
+    text-decoration: none;
+    color: var(--ink-soft);
+  }
+
+  nav a:hover,
+  nav a[aria-current='page'] {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+  }
+
+  main {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* Matches the breakpoint where the map replaces the list (see meander/index.astro). */
+  @media (min-width: 48rem) {
+    :global(html[data-js]) .full-bleed {
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    :global(html[data-js]) .full-bleed main {
+      position: relative;
+      min-height: 0;
+    }
+  }
+
+  .site-footer {
+    display: flex;
+    gap: var(--space-2);
+    width: 100%;
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding: var(--space-6) var(--gutter) var(--space-4);
+    font-style: italic;
+    color: var(--ink-faint);
+  }
+
+  /* Sized on the children so the footer's own `ch`-based width matches the page column. */
+  .site-footer > * {
+    font-size: var(--text-sm);
+  }
+</style>

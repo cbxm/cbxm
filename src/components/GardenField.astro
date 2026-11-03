@@ -1,0 +1,193 @@
+---
+import Plant from './Plant.astro';
+import { fieldBounds, pieceHref, plantVariation, type Piece } from '../lib/garden';
+
+interface Props {
+  pieces: Piece[];
+  /** Plants are links when true; a static picture otherwise. */
+  interactive?: boolean;
+}
+
+const { pieces, interactive = false } = Astro.props;
+const bounds = fieldBounds(pieces);
+const originX = -bounds.left;
+const originY = -bounds.top;
+
+// Lower plants are drawn later so they overlap the ones behind them.
+const planted = [...pieces].sort((a, b) => a.data.y - b.data.y);
+
+/**
+ * Grass tufts and pebbles so the open ground has texture. One mark per cell of map
+ * space, seeded by the cell's coordinates, so the ground stays put as the field grows.
+ */
+function scatter() {
+  const CELL = 290;
+  const marks = [];
+  for (let cx = Math.floor(bounds.left / CELL); cx * CELL < bounds.left + bounds.width; cx++) {
+    for (let cy = Math.floor(bounds.top / CELL); cy * CELL < bounds.top + bounds.height; cy++) {
+      let seed = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
+      const rand = () => {
+        seed = (Math.imul(seed ^ (seed >>> 15), 2246822507) + 0x9e3779b9) >>> 0;
+        return seed / 4294967296;
+      };
+      marks.push({
+        x: Math.round((cx + rand()) * CELL - bounds.left),
+        y: Math.round((cy + rand()) * CELL - bounds.top),
+        kind: rand() < 0.78 ? 'tuft' : 'pebble',
+        flip: rand() < 0.5 ? -1 : 1,
+        scale: 0.7 + rand() * 0.6,
+      });
+    }
+  }
+  return marks;
+}
+const ground = scatter();
+const Tag = interactive ? 'a' : 'span';
+---
+
+<div
+  class="field"
+  style={`width: ${bounds.width}px; height: ${bounds.height}px; --origin-x: ${originX}px; --origin-y: ${originY}px;`}
+  data-origin-x={originX}
+  data-origin-y={originY}
+>
+  <svg class="ground" width={bounds.width} height={bounds.height} aria-hidden="true">
+    {
+      ground.map((g) =>
+        g.kind === 'tuft' ? (
+          <path
+            transform={`translate(${g.x} ${g.y}) scale(${g.flip * g.scale} ${g.scale})`}
+            d="M-5 0 Q-5 -4 -7 -7 M0 0 Q0 -6 1 -10 M4 0 Q5 -3 8 -5"
+          />
+        ) : (
+          <ellipse cx={g.x} cy={g.y} rx={2.4 * g.scale} ry={1.6 * g.scale} />
+        ),
+      )
+    }
+  </svg>
+
+  {
+    planted.map((piece) => {
+      const v = plantVariation(piece.id);
+      return (
+        <Tag
+          class="sprig"
+          href={interactive ? pieceHref(piece) : undefined}
+          tabindex={interactive ? -1 : undefined}
+          data-slug={piece.id}
+          style={`left: ${originX + piece.data.x}px; top: ${originY + piece.data.y}px; --flip: ${v.flip ? -1 : 1}; --lean: ${v.lean.toFixed(2)}deg; --scale: ${v.scale.toFixed(3)};`}
+        >
+          <span class="sprig-form">
+            <Plant stage={piece.data.stage} />
+          </span>
+          <span class="sprig-label">{piece.data.title}</span>
+        </Tag>
+      );
+    })
+  }
+</div>
+
+<style>
+  .field {
+    position: relative;
+    background-image: radial-gradient(circle, rgb(42 37 31 / 0.07) 1px, transparent 1.6px);
+    background-size: 56px 56px;
+    background-position: calc(var(--origin-x) - 28px) calc(var(--origin-y) - 28px);
+  }
+
+  .ground {
+    position: absolute;
+    inset: 0;
+    max-width: none;
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1;
+    stroke-linecap: round;
+    opacity: 0.22;
+    pointer-events: none;
+  }
+
+  .ground ellipse {
+    fill: var(--ink-faint);
+    stroke: none;
+  }
+
+  .sprig {
+    position: absolute;
+    width: 0;
+    height: 0;
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+
+  /* Soft shadow where the plant meets the ground. */
+  .sprig::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: calc(54px * var(--scale));
+    height: calc(12px * var(--scale));
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, var(--shadow), transparent);
+  }
+
+  .sprig-form {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    display: block;
+    transform-origin: 50% 100%;
+    transform: translateX(-50%) rotate(var(--lean)) scale(calc(var(--flip) * var(--scale)), var(--scale));
+  }
+
+  .sprig-form :global(.plant) {
+    transform-origin: 50% 100%;
+  }
+
+  .sprig-label {
+    position: absolute;
+    left: 0;
+    top: 0.6rem;
+    translate: -50% 0;
+    width: max-content;
+    max-width: 17ch;
+    font-size: 0.95rem;
+    font-style: italic;
+    line-height: 1.25;
+    text-align: center;
+    text-wrap: balance;
+    transition: color 0.25s;
+  }
+
+  a.sprig:hover,
+  .sprig.is-lit {
+    color: var(--ink);
+  }
+
+  a.sprig:hover .sprig-label,
+  .sprig.is-lit .sprig-label {
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 0.2em;
+  }
+
+  a.sprig:hover :global(.plant),
+  .sprig.is-lit :global(.plant) {
+    animation: sway 2.4s ease-in-out infinite;
+  }
+
+  @keyframes sway {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    30% {
+      transform: rotate(2.5deg);
+    }
+    70% {
+      transform: rotate(-2deg);
+    }
+  }
+</style>

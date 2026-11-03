@@ -1,0 +1,17 @@
+---
+import { render } from 'astro:content';
+import PieceLayout from '../../layouts/Piece.astro';
+import { getGarden, type Piece } from '../../lib/garden';
+
+export async function getStaticPaths() {
+  const pieces = await getGarden();
+  return pieces.map((piece) => ({ params: { slug: piece.id }, props: { piece } }));
+}
+
+const { piece } = Astro.props as { piece: Piece };
+const { Content } = await render(piece);
+---
+
+<PieceLayout piece={piece}>
+  <Content />
+</PieceLayout>
