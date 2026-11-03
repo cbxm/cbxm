@@ -25,10 +25,20 @@ export function plantGardenMap() {
   const sprigFor = (slug: string | undefined) =>
     slug ? field.querySelector<HTMLElement>(`.sprig[data-slug="${CSS.escape(slug)}"]`) : null;
 
-  /** Scroll so field point (x, y) sits in the middle of the view. */
+  const legend = document.querySelector<HTMLElement>('.index');
+
+  /** Width along the map's left edge that the legend covers; the view's middle is measured from there. */
+  const legendCover = () => {
+    if (!legend) return 0;
+    const cover = legend.getBoundingClientRect().right - map.getBoundingClientRect().left;
+    return Math.min(Math.max(0, cover), map.clientWidth / 2);
+  };
+
+  /** Scroll so field point (x, y) sits in the middle of the part of the map the legend leaves open. */
   const centerOn = (x: number, y: number, behavior: ScrollBehavior = 'auto') => {
+    const cover = legendCover();
     map.scrollTo({
-      left: x - map.clientWidth / 2,
+      left: x - (cover + (map.clientWidth - cover) / 2),
       top: y - map.clientHeight / 2,
       behavior: reducedMotion.matches ? 'auto' : behavior,
     });
@@ -58,6 +68,10 @@ export function plantGardenMap() {
   wide.addEventListener('change', placeView);
 
   // Drag to pan with mouse or pen. Touch already pans natively.
+  // A drag starts on the map but is followed on the window: until the pointer is
+  // captured past the threshold, it can wander onto the legend or header, and the
+  // release has to end the drag wherever it lands. Capturing at pointerdown instead
+  // would retarget the click to the map, so plants could no longer be clicked.
   let drag: { x: number; y: number; left: number; top: number; moved: boolean } | null = null;
   let velocity = { x: 0, y: 0 };
   let last = { x: 0, y: 0, t: 0 };
@@ -72,8 +86,10 @@ export function plantGardenMap() {
     last = { x: e.clientX, y: e.clientY, t: e.timeStamp };
   });
 
-  map.addEventListener('pointermove', (e) => {
+  window.addEventListener('pointermove', (e) => {
     if (!drag) return;
+    // No primary button means the release happened somewhere this page never heard about.
+    if ((e.buttons & 1) === 0) return endDrag(e);
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
     if (!drag.moved) {
@@ -111,8 +127,8 @@ export function plantGardenMap() {
     };
     glide = requestAnimationFrame(step);
   };
-  map.addEventListener('pointerup', endDrag);
-  map.addEventListener('pointercancel', endDrag);
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
   map.addEventListener('wheel', () => cancelAnimationFrame(glide), { passive: true });
   map.addEventListener(
     'click',

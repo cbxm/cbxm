@@ -4,7 +4,8 @@ import { z } from 'astro/zod';
 import { stages } from './lib/stages';
 
 const garden = defineCollection({
-  loader: glob({ pattern: '**/*.mdx', base: './src/content/garden' }),
+  // Flat on purpose: the slug is the filename, and a piece's own code lives in src/pieces/<slug>/.
+  loader: glob({ pattern: '*.mdx', base: './src/content/garden' }),
   schema: z.object({
     title: z.string(),
     date: z.coerce.date(),

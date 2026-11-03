@@ -74,6 +74,7 @@ const Tag = interactive ? 'a' : 'span';
           class="sprig"
           href={interactive ? pieceHref(piece) : undefined}
           tabindex={interactive ? -1 : undefined}
+          draggable={interactive ? 'false' : undefined}
           data-slug={piece.id}
           style={`left: ${originX + piece.data.x}px; top: ${originY + piece.data.y}px; --flip: ${v.flip ? -1 : 1}; --lean: ${v.lean.toFixed(2)}deg; --scale: ${v.scale.toFixed(3)};`}
         >
