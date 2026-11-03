@@ -1,9 +1,14 @@
 /**
  * Behavior for the /ander map: open centered on the origin (or on the plant
- * named in the URL hash), drag to pan with momentum, keep the legend and the
- * plants pointing at each other, and light a plant's roots and the plants they
- * reach. The map is a native scroll container, so trackpads, wheels and touch
- * scroll it without any help from here.
+ * named in the URL hash), drag to pan with momentum, zoom with a pinch or
+ * ctrl+wheel, keep the legend and the plants pointing at each other, and light a
+ * plant's roots and the plants they reach. The map is a native scroll container,
+ * so trackpads, wheels and touch scroll it without any help from here.
+ *
+ * Zoom is CSS `zoom` on the field, driven by its `--zoom` property, so the field
+ * lays out at the zoomed size: text stays sharp and the scroll extents follow.
+ * Positions read from the field (offsetLeft, data-origin-*) are in unzoomed field
+ * pixels; scroll offsets are in screen pixels, which is the same thing times the zoom.
  */
 
 const DRAG_THRESHOLD = 4;
@@ -14,6 +19,18 @@ const GLIDE_CUTOFF = 80;
 const PLANT_AIM = 40;
 /** localStorage key for whether the legend is folded. */
 const FOLDED_KEY = 'cbxm:legend-folded';
+/** Zoom range. Zooming out also stops where the field would no longer fill the map. */
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+/**
+ * Zoom changes by e^(-delta * ZOOM_RATE) for a wheel delta in pixels. Chromium reports a pinch as
+ * ctrl+wheel with deltaY = -100 * ln(scale), so this rate makes a pinch track the fingers exactly.
+ */
+const ZOOM_RATE = 0.01;
+/** Largest delta one wheel event may apply, so a mouse notch (100px or more) zooms by about 20%. */
+const ZOOM_STEP = 20;
+/** Pixels per line, for wheels that report in lines (Firefox with ctrl held). */
+const LINE_HEIGHT = 16;
 
 export function plantGardenMap() {
   const map = document.querySelector<HTMLElement>('.map');
@@ -24,6 +41,9 @@ export function plantGardenMap() {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const originX = Number(field.dataset.originX);
   const originY = Number(field.dataset.originY);
+
+  const fieldSize = { width: field.offsetWidth, height: field.offsetHeight };
+  let zoom = 1;
 
   const sprigFor = (slug: string | undefined) =>
     slug ? field.querySelector<HTMLElement>(`.sprig[data-slug="${CSS.escape(slug)}"]`) : null;
@@ -41,8 +61,8 @@ export function plantGardenMap() {
   const centerOn = (x: number, y: number, behavior: ScrollBehavior = 'auto') => {
     const cover = legendCover();
     map.scrollTo({
-      left: x - (cover + (map.clientWidth - cover) / 2),
-      top: y - map.clientHeight / 2,
+      left: x * zoom - (cover + (map.clientWidth - cover) / 2),
+      top: y * zoom - map.clientHeight / 2,
       behavior: reducedMotion.matches ? 'auto' : behavior,
     });
   };
@@ -165,7 +185,54 @@ export function plantGardenMap() {
   };
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
-  map.addEventListener('wheel', () => cancelAnimationFrame(glide), { passive: true });
+
+  /** Smallest zoom: MIN_ZOOM, or where the field just fills the map if that comes first. Never above 1. */
+  const minZoom = () =>
+    Math.min(1, Math.max(MIN_ZOOM, map.clientWidth / fieldSize.width, map.clientHeight / fieldSize.height));
+
+  /** Zoom to `next`, keeping the field point under (clientX, clientY) where it is on screen. */
+  const zoomAt = (next: number, clientX: number, clientY: number) => {
+    next = Math.min(MAX_ZOOM, Math.max(minZoom(), next));
+    if (next === zoom) return;
+    const rect = map.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const fieldX = (map.scrollLeft + x) / zoom;
+    const fieldY = (map.scrollTop + y) / zoom;
+    zoom = next;
+    field.style.setProperty('--zoom', String(zoom));
+    map.scrollLeft = fieldX * zoom - x;
+    map.scrollTop = fieldY * zoom - y;
+  };
+
+  // A plain wheel or two-finger swipe scrolls natively. With ctrl held, which is also how
+  // Chromium and Firefox report a trackpad pinch, it zooms the map instead of the page.
+  map.addEventListener(
+    'wheel',
+    (e) => {
+      cancelAnimationFrame(glide);
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const unit =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE ? LINE_HEIGHT : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? map.clientHeight : 1;
+      const delta = Math.min(ZOOM_STEP, Math.max(-ZOOM_STEP, e.deltaY * unit));
+      zoomAt(zoom * Math.exp(-delta * ZOOM_RATE), e.clientX, e.clientY);
+    },
+    { passive: false },
+  );
+
+  // Safari reports a trackpad pinch as its own gesture events, with the scale since the pinch began.
+  type GestureEvent = UIEvent & { scale: number; clientX: number; clientY: number };
+  let pinchFrom = 1;
+  map.addEventListener('gesturestart', (e) => {
+    e.preventDefault();
+    pinchFrom = zoom;
+  });
+  map.addEventListener('gesturechange', (e) => {
+    e.preventDefault();
+    const { scale, clientX, clientY } = e as GestureEvent;
+    zoomAt(pinchFrom * scale, clientX, clientY);
+  });
   map.addEventListener(
     'click',
     (e) => {
