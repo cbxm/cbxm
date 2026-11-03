@@ -150,6 +150,8 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
       scrollbar-width: none;
       cursor: grab;
       overscroll-behavior: contain;
+      /* A pinch over the map zooms the map (garden-map.ts), never the page as well. */
+      touch-action: pan-x pan-y;
       -webkit-user-select: none;
       user-select: none;
       /* Fade the field into the header and edges. */

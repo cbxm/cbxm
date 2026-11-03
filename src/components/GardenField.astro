@@ -170,6 +170,8 @@ const Tag = interactive ? 'a' : 'span';
   style={`width: ${bounds.width}px; height: ${bounds.height}px; --origin-x: ${originX}px; --origin-y: ${originY}px;`}
   data-origin-x={originX}
   data-origin-y={originY}
+  data-width={bounds.width}
+  data-height={bounds.height}
 >
   <svg class="roots" width={bounds.width} height={bounds.height} aria-hidden="true">
     {
@@ -222,6 +224,8 @@ const Tag = interactive ? 'a' : 'span';
 <style>
   .field {
     position: relative;
+    /* The /ander map sets --zoom when the reader pinches or ctrl+scrolls. */
+    zoom: var(--zoom, 1);
     background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1.6px);
     background-size: 56px 56px;
     background-position: calc(var(--origin-x) - 28px) calc(var(--origin-y) - 28px);
@@ -319,7 +323,8 @@ const Tag = interactive ? 'a' : 'span';
     translate: -50% 0;
     width: max-content;
     max-width: 17ch;
-    font-size: 0.95rem;
+    /* Zoomed out, labels shrink with the map only as far as they stay readable. */
+    font-size: max(0.95rem, calc(0.6rem / var(--zoom, 1)));
     font-style: italic;
     line-height: 1.25;
     text-align: center;
