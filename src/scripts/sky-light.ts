@@ -1,8 +1,19 @@
+/*
+ * The page's light before first paint. Base.astro inlines findPlace() and lightSky() in <head>,
+ * and /sky-zones.js (src/pages/sky-zones.js.ts) runs placeViewer(), so each function here must
+ * stay self-contained: no imports and no references outside its own body.
+ *
+ * The viewer's place travels as data-place="lat lon" on <html>, and is saved in localStorage
+ * under `sky-place` as { tz, place } so later pages skip the zone table.
+ */
+
 export interface SkyFix {
   /** The moment the sky shows: now, or the time asked for with `?sky=`. */
   date: Date;
   lat: number;
   lon: number;
+  /** The azimuth the view faces: 180 (south) when the sun crosses the meridian south of overhead that day, else 0 (north). */
+  facing: number;
   /** The sun's altitude in degrees. */
   alt: number;
   /** The sun's azimuth in degrees clockwise from north. */
@@ -10,38 +21,66 @@ export interface SkyFix {
 }
 
 /**
- * Lights the page for where the sun is. Sets on <html>:
+ * Puts the place saved for this time zone on <html>. Without one (a first visit, or a new
+ * zone), writes in `zonesUrl` as a blocking script, so only that page load pays for the table.
+ */
+export function findPlace(zonesUrl: string) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try {
+    const saved = JSON.parse(localStorage.getItem('sky-place') ?? 'null');
+    if (saved && saved.tz === tz) {
+      if (saved.place) document.documentElement.dataset.place = saved.place;
+      return;
+    }
+  } catch {}
+  document.write('<script src="' + zonesUrl + '"></script>');
+}
+
+/**
+ * Looks the browser's time zone up in `zones` (name → [lat, lon] of its principal city), puts it
+ * on <html>, and saves it. A zone missing from the table is saved without a place, and lightSky()
+ * guesses one.
+ */
+export function placeViewer(zones: Record<string, number[] | undefined>) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const place = zones[tz]?.join(' ');
+  if (place) document.documentElement.dataset.place = place;
+  try {
+    localStorage.setItem('sky-place', JSON.stringify({ tz, place }));
+  } catch {}
+}
+
+/**
+ * Lights the page for where the sun is, at the place on <html> or a guess at 40°N on the time
+ * zone's meridian. Sets on <html>:
  *
- * - `--sun-alt`: the sun's altitude in degrees
+ * - `--low`: 0 with the sun 8° up, 1 at 4° down, where night begins
+ * - `--deep`: 0 with the sun 4° down, 1 at 16° down
+ * - `--glow`: the warm band near the sun: in from 14° up, strongest around the horizon, gone by 16° down
+ * - `--sunset`: how far the sun's disc has reddened, 0 at 20° up to 1 at the horizon
  * - `--sun-x`: the sun across the screen, 0 at the left edge to 1 at the right (see sky.ts for the view)
  * - `--rising`: 1 before solar noon, 0 after
  * - `--sky-clock`: seconds into the hour at first light, so drifting clouds pick up where the last page left them
- * - `data-sky`: `day`, `dawn`, `dusk`, or `night`, which starts once the sun is 4° below the horizon
+ * - `data-sky`: `day`, `dawn`, `dusk`, or `night`
  *
- * tokens.css turns these into the palette. `?sky=HH:MM` shows today at that time and `?sky=night` the
- * middle of tonight.
- *
- * Base.astro inlines this function's source in <head> so the first paint already has the right light,
- * so it must stay self-contained: no imports and no references outside its own body. Without `where`,
- * it uses the place sky.ts last saved for this time zone, or a guess at 40°N on the zone's meridian.
+ * and sets <meta name="theme-color">. tokens.css turns the rest into the palette.
+ * `?sky=HH:MM` shows today at that time and `?sky=night` the middle of tonight.
  * The sun comes from a low-precision solar formula, good to about 0.01°.
  */
-export function lightSky(where?: { lat: number; lon: number }): SkyFix {
+export function lightSky(): SkyFix {
   const RAD = Math.PI / 180;
   const root = document.documentElement;
+  const unit = (n: number) => Math.min(1, Math.max(0, n));
 
-  if (!where) {
-    try {
-      const saved = JSON.parse(localStorage.getItem('sky-where') ?? 'null');
-      if (saved && saved.tz === Intl.DateTimeFormat().resolvedOptions().timeZone) where = saved;
-    } catch {}
-  }
-  if (!where) {
+  let lat = 40;
+  let lon: number;
+  const place = root.dataset.place?.split(' ').map(Number);
+  if (place) [lat, lon] = place;
+  else {
     const year = new Date().getFullYear();
     const standardOffset = Math.max(new Date(year, 0, 1).getTimezoneOffset(), new Date(year, 6, 1).getTimezoneOffset());
-    where = { lat: 40, lon: -standardOffset / 4 };
+    lon = -standardOffset / 4;
   }
-  const { lat, lon } = where;
 
   const date = new Date();
   const asked = new URLSearchParams(location.search).get('sky') ?? '';
@@ -69,14 +108,29 @@ export function lightSky(where?: { lat: number; lon: number }): SkyFix {
       360) %
     360;
   const rising = Math.sin(hourAngle) < 0;
+  const facing = dec / RAD < lat ? 180 : 0;
 
-  const ahead = (((az - (lat < 0 ? 0 : 180)) % 360) + 540) % 360 - 180;
-  root.style.setProperty('--sun-alt', alt.toFixed(2));
+  const low = unit((8 - alt) / 12);
+  const deep = unit((-4 - alt) / 12);
+  const ahead = ((((az - facing) % 360) + 540) % 360) - 180;
+  root.style.setProperty('--low', low.toFixed(3));
+  root.style.setProperty('--deep', deep.toFixed(3));
+  root.style.setProperty('--glow', unit(Math.min((14 - alt) / 14, (alt + 16) / 12)).toFixed(3));
+  root.style.setProperty('--sunset', unit(1 - alt / 20).toFixed(3));
   root.style.setProperty('--sun-x', Math.min(1.2, Math.max(-0.2, 0.5 + ahead / 180)).toFixed(3));
   root.style.setProperty('--rising', rising ? '1' : '0');
   if (!root.style.getPropertyValue('--sky-clock'))
     root.style.setProperty('--sky-clock', String(Math.round(Date.now() / 1000) % 3600));
-  root.dataset.sky = alt < -4 ? 'night' : alt < 8 ? (rising ? 'dawn' : 'dusk') : 'day';
+  const night = alt < -4;
+  root.dataset.sky = night ? 'night' : alt < 8 ? (rising ? 'dawn' : 'dusk') : 'day';
 
-  return { date, lat, lon, alt, az };
+  // --paper's two ends for this mode in tokens.css, mixed in sRGB.
+  const [from, to, t] = night ? ['2b2b3d', '141824', deep] : ['f3ede1', 'ecd6be', low];
+  const channel = (i: number) =>
+    Math.round(parseInt(from.slice(i, i + 2), 16) * (1 - t) + parseInt(to.slice(i, i + 2), 16) * t)
+      .toString(16)
+      .padStart(2, '0');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', `#${channel(0)}${channel(2)}${channel(4)}`);
+
+  return { date, lat, lon, facing, alt, az };
 }
