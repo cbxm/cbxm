@@ -3,13 +3,15 @@
  * and the twelve zodiac constellations, each where it really is for the viewer, redrawn every
  * minute. lightSky() sets the palette from the same moment.
  *
- * The view is a 180° panorama facing the equator: south in the northern hemisphere, north in
- * the southern. Azimuth runs evenly across the screen and altitude up it, from the horizon at
- * the bottom edge to the zenith at the top. Facing south, east is on the left, so everything
- * rises on the left and sets on the right; facing north it is the other way round. Whatever is
- * below the horizon or behind the viewer is not drawn.
+ * The view is a 180° panorama facing the side of the sky where the sun crosses the meridian
+ * that day, so the sun always passes through it: south for most of the northern hemisphere,
+ * north for most of the southern, and either in the tropics as the seasons turn. Azimuth runs
+ * evenly across the screen and altitude up it, from the horizon at the bottom edge to the
+ * zenith at the top. Facing south, east is on the left, so everything rises on the left and
+ * sets on the right; facing north it is the other way round. Whatever is below the horizon or
+ * behind the viewer is not drawn.
  *
- * The viewer is placed at their time zone's principal city (tz-coords.json).
+ * The viewer is placed at their time zone's principal city (see sky-light.ts).
  */
 import {
   Body,
@@ -36,25 +38,6 @@ const MOON_R = 12;
 const TWINKLE_MAG = 2.5;
 
 const PLANETS = [Body.Mercury, Body.Venus, Body.Mars, Body.Jupiter, Body.Saturn];
-
-type Where = { lat: number; lon: number };
-
-/** The viewer's place from their time zone, remembered so the <head> copy of lightSky() can use it next time. */
-async function findViewer(): Promise<Where | undefined> {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  try {
-    const saved = JSON.parse(localStorage.getItem('sky-where') ?? 'null');
-    if (saved?.tz === tz) return { lat: saved.lat, lon: saved.lon };
-  } catch {}
-  const zones: Record<string, number[] | undefined> = (await import('../lib/tz-coords.json')).default;
-  const found = zones[tz];
-  if (!found) return undefined;
-  const where = { lat: found[0], lon: found[1] };
-  try {
-    localStorage.setItem('sky-where', JSON.stringify({ tz, ...where }));
-  } catch {}
-  return where;
-}
 
 /** Faintest magnitude that shows with the sun at `sunAlt`: nothing until night, everything by 16° down. */
 const faintest = (sunAlt: number) => (sunAlt > -4 ? -Infinity : 1 + (-4 - sunAlt) * 0.45);
@@ -142,12 +125,11 @@ function raiseSky(sky: HTMLElement) {
   return function draw(fix: SkyFix) {
     const time = MakeTime(fix.date);
     const observer = new Observer(fix.lat, fix.lon, 0);
-    const center = fix.lat < 0 ? 0 : 180;
     const limit = faintest(fix.alt);
 
     /** Position as fractions of the viewport. `ahead` is degrees of azimuth from the middle of the view. */
     const project = (alt: number, az: number) => {
-      const ahead = ((((az - center) % 360) + 540) % 360) - 180;
+      const ahead = ((((az - fix.facing) % 360) + 540) % 360) - 180;
       return { x: 0.5 + ahead / 180, y: 1 - alt / 90, ahead, alt };
     };
     const inView = (at: { alt: number; ahead: number }, slack = 0) => at.alt > -slack && Math.abs(at.ahead) <= 90 + slack;
@@ -236,45 +218,26 @@ function raiseSky(sky: HTMLElement) {
   };
 }
 
-const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-
-/** A CSS colour as #rrggbb. The palette computes to oklab(), which theme-color may not take. */
-function hex(color: string) {
-  if (!probe) return color;
-  probe.fillStyle = color;
-  probe.fillRect(0, 0, 1, 1);
-  return `#${[...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
-}
-
 const sky = document.querySelector<HTMLElement>('.sky');
-const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
 if (sky) {
   const draw = raiseSky(sky);
-  const start = (where: Where | undefined) => {
-    const tick = () => {
-      draw(lightSky(where));
-      if (themeColor) themeColor.content = hex(getComputedStyle(document.body).backgroundColor);
-    };
+  const tick = () => draw(lightSky());
 
-    tick();
-    setTimeout(
-      () => {
-        tick();
-        setInterval(tick, 60_000);
-      },
-      60_000 - (Date.now() % 60_000),
-    );
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') tick();
-    });
-    let frame = 0;
-    addEventListener('resize', () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(tick);
-    });
-  };
-
-  // Without a place (an unknown zone, or the zone table failed to load), lightSky() guesses one.
-  findViewer().then(start, () => start(undefined));
+  tick();
+  setTimeout(
+    () => {
+      tick();
+      setInterval(tick, 60_000);
+    },
+    60_000 - (Date.now() % 60_000),
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') tick();
+  });
+  let frame = 0;
+  addEventListener('resize', () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(tick);
+  });
 }

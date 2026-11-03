@@ -49,25 +49,17 @@
 }
 
 /*
- * The sky's light, from what lightSky() (src/scripts/sky-light.ts) sets on <html>: the sun's
- * altitude --sun-alt in degrees, --rising, and data-sky.
+ * The sky's light, from what lightSky() (src/scripts/sky-light.ts) sets on <html>: data-sky,
+ * --rising, and the ramps --low, --deep, --glow, and --sunset, each 0 to 1 by the sun's altitude.
  *
  * The palette has two modes, because a crossfade from light paper to dark passes through
  * mid-tones that no ink reads on. Through the day and twilight the paper warms as the sun
- * drops. Night begins with the sun 4° down: the lamp comes on, the ink turns light, and the
- * paper deepens from twilight to full dark by 16° down. The glow along the horizon and the
- * stars change continuously across the switch.
+ * drops (--low). Night begins with the sun 4° down: the lamp comes on, the ink turns light,
+ * and the paper deepens from twilight to full dark (--deep). The glow along the horizon and
+ * the stars change continuously across the switch. lightSky() mixes theme-color from the
+ * same --paper ends, so change them together.
  */
 html[data-sky] {
-  /* 0 with the sun 8° up, 1 at 4° down. */
-  --low: clamp(0, calc((8 - var(--sun-alt)) / 12), 1);
-  /* 0 with the sun 4° down, 1 at 16° down. */
-  --deep: clamp(0, calc((-4 - var(--sun-alt)) / 12), 1);
-  /* The warm band near the sun: in from 14° up, strongest around the horizon, gone by 16° down. */
-  --glow: clamp(0, min(calc((14 - var(--sun-alt)) / 14), calc((var(--sun-alt) + 16) / 12)), 1);
-  /* How far the sun's disc has reddened: 0 at 20° up, 1 at the horizon. */
-  --sunset: clamp(0, calc(1 - var(--sun-alt) / 20), 1);
-
   /* Day values from :root, warmed toward the lamp. */
   --paper: color-mix(in oklab, #ecd6be calc(var(--low) * 100%), #f3ede1);
   --paper-light: color-mix(in oklab, #f4e3cf calc(var(--low) * 100%), #f8f4ec);
