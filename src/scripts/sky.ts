@@ -102,10 +102,11 @@ interface Item {
   nodes: Element[];
   /** Its invisible targets, tagged with the item's id. */
   hit: SVGGElement;
-  /** Where its label hangs from, in px within the sky, and how far the label keeps clear. */
+  /** Where its label hangs from, in px within the sky, and how far the label keeps clear across and up or down. */
   x: number;
   y: number;
-  reach: number;
+  rx: number;
+  ry: number;
 }
 
 /** Builds the sky's bodies inside `.sky` and returns the function that moves them to a moment. */
@@ -147,7 +148,7 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
 
   const items = new Map<string, Item>();
   const addItem = (id: string, name: string, nodes: Element[]) => {
-    const item = { name, nodes, hit: svg('g', { 'data-item': id }, hits), x: 0, y: 0, reach: 0 };
+    const item = { name, nodes, hit: svg('g', { 'data-item': id }, hits), x: 0, y: 0, rx: 0, ry: 0 };
     items.set(id, item);
     return item;
   };
@@ -200,7 +201,11 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
   // The header's wordmark, nav, and theme button (Base.astro), which a label must not cover.
   const obstacles = [...(label.parentElement?.querySelectorAll('.wordmark, .header-end') ?? [])];
 
-  /** Hangs the label above the lit item, or below it when the room above is off the band or taken. */
+  /**
+   * Hangs the label inside the band and clear of the lit item: above, below, or level with it,
+   * centred on it, beside it, or slid to an edge of the header's words. Of those slots it takes
+   * the one covering the least of the words, then the nearest.
+   */
   const placeLabel = () => {
     const item = lit ? items.get(lit) : undefined;
     label.hidden = !item;
@@ -209,16 +214,31 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
     const pad = 4;
     const w = label.offsetWidth;
     const h = label.offsetHeight;
+    const width = sky.clientWidth;
+    const height = sky.clientHeight;
     const band = sky.getBoundingClientRect();
-    const left = clamp(item.x - w / 2, pad, sky.clientWidth - w - pad);
-    const covers = (top: number) =>
-      obstacles.some((o) => {
-        const r = o.getBoundingClientRect();
-        return left < r.right - band.left && left + w > r.left - band.left && top < r.bottom - band.top && top + h > r.top - band.top;
-      });
-    const above = item.y - item.reach - h;
-    const top = above >= pad && !covers(above) ? above : Math.min(item.y + item.reach, sky.clientHeight - h - pad);
-    label.style.translate = `${left.toFixed(1)}px ${top.toFixed(1)}px`;
+    const taken = obstacles.map((o) => {
+      const r = o.getBoundingClientRect();
+      return { left: r.left - band.left, right: r.right - band.left, top: r.top - band.top, bottom: r.bottom - band.top };
+    });
+    const covered = ([x, y]: number[]) =>
+      taken.reduce(
+        (sum, r) =>
+          sum + Math.max(0, Math.min(x + w, r.right) - Math.max(x, r.left)) * Math.max(0, Math.min(y + h, r.bottom) - Math.max(y, r.top)),
+        0,
+      );
+    const distance = ([x, y]: number[]) => Math.hypot(x + w / 2 - item.x, y + h / 2 - item.y);
+
+    const xs = [item.x - w / 2, item.x + item.rx, item.x - item.rx - w, ...taken.flatMap((r) => [r.right + pad, r.left - w - pad])];
+    const ys = [item.y - item.ry - h, item.y + item.ry, item.y - h / 2];
+    const clearOfItem = ([x, y]: number[]) =>
+      x >= item.x + item.rx || x + w <= item.x - item.rx || y >= item.y + item.ry || y + h <= item.y - item.ry;
+    const slots = ys
+      .flatMap((y) => xs.map((x) => [clamp(x, pad, width - w - pad), clamp(y, pad, height - h - pad)]))
+      .filter(clearOfItem)
+      .sort((a, b) => covered(a) - covered(b) || distance(a) - distance(b));
+    const [x, y] = slots[0] ?? [clamp(item.x - w / 2, pad, width - w - pad), clamp(item.y + item.ry, pad, height - h - pad)];
+    label.style.translate = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
   };
 
   const light = (id: string | undefined) => {
@@ -263,10 +283,11 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
       const hor = Horizon(time, observer, eq.ra, eq.dec, 'normal');
       return project(hor.altitude, hor.azimuth);
     };
-    const anchor = (item: Item, at: { x: number; y: number }, reach: number) => {
+    const anchor = (item: Item, at: { x: number; y: number }, rx: number, ry = rx) => {
       item.x = at.x * width;
       item.y = at.y * height;
-      item.reach = reach;
+      item.rx = rx;
+      item.ry = ry;
     };
     const place = (node: Element, at: { x: number; y: number }, x = 'cx', y = 'cy') => {
       node.setAttribute(x, pct(at.x));
@@ -314,11 +335,10 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
       }
       show(item.hit, shown.length > 0);
       if (shown.length) {
+        const xs = shown.map(({ i }) => placed[i].x);
         const ys = shown.map(({ i }) => placed[i].y);
-        const top = Math.min(...ys);
-        const bottom = Math.max(...ys);
-        const x = shown.reduce((sum, { i }) => sum + placed[i].x, 0) / shown.length;
-        anchor(item, { x, y: (top + bottom) / 2 }, ((bottom - top) / 2) * height + 8);
+        const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+        anchor(item, { x: (left + right) / 2, y: (top + bottom) / 2 }, ((right - left) / 2) * width + 8, ((bottom - top) / 2) * height + 8);
       }
     }
 
