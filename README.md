@@ -57,7 +57,7 @@ bun run deploy:check    # build and validate without uploading or credentials
 
 `cf deploy` on its own won't work here: cf detects Astro and expects the `@astrojs/cloudflare` adapter, which a static site doesn't need. The scripts build with Astro, package `dist/` with `cf-wrangler build`, and deploy that with `cf deploy --prebuilt`.
 
-The site serves `cbxm.me` and `www.cbxm.me` (the `domains` list in `cloudflare.config.ts`) and also `cbxm-me.cbxm.workers.dev`. Cloudflare manages those DNS records; a hand-made record on either name makes the deploy fail.
+The site serves `cbxm.me` and `www.cbxm.me` (the `domains` list in `cloudflare.config.ts`). The workers.dev address is off; set `workersDev: true` in the config to bring it back. Cloudflare manages those DNS records; a hand-made record on either name makes the deploy fail.
 
 ### CI
 
