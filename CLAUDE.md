@@ -21,7 +21,7 @@ Caden's personal site: a writing garden where pieces can carry bespoke interacti
 ## Gotchas
 
 - **Astro 7 Markdown is Sätteri, not remark.** `markdown.remarkPlugins` errors, and `mdx({ remarkPlugins })` is silently ignored. Extend the pipeline with `satteri({ features, mdastPlugins })` in `astro.config.mjs`. Sätteri's `ctx.report` diagnostics never print, so use `console.warn`.
-- **Wikilinks.** `[[title]]` becomes `/ander/<slugify(title)>`. The filename must equal `slugify(title)`, or the build warns `[wikilinks] ... has no piece`. Treat that warning as a broken link.
+- **Wikilinks.** `[[title]]` becomes `/ander/<slugify(title)>`. The filename must equal `slugify(title)`. The build prints `[wikilinks]` warnings when a target has no piece or when a published piece links to a draft. Treat either as a broken link. `[[t#heading]]` links to the top of the page, because Astro's heading ids use github-slugger, not `slugify`.
 - **Drafts.** `draft: true` pieces appear in `bun dev` and are absent from `bun run build`. Anything that lists pieces must go through `getGarden()`.
 - **Map placement.** `x, y` is in pixels from the origin, and positive y points down. The map opens centred on (0,0), in the space to the right of the legend panel, and the landing page shows a window around (0,0). Plant a piece near the pieces it links to. The field grows to fit, so nothing is out of reach.
 - **Never run `cf init` / `cf build` here.** On an Astro project they install the SSR adapter and turn the static site into a server Worker. The pipeline is `astro build` → `cf-wrangler build` → `cf deploy --prebuilt` (the `build:cf` and `deploy` scripts).
