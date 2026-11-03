@@ -23,17 +23,21 @@ Prose goes here.
 
 The build fails if the frontmatter doesn't match this shape (`src/content.config.ts`).
 
+**Linking.** `[[a piece title]]` links to that piece. The filename is the title lowercased, apostrophes dropped, and every other run of non-letters turned into one hyphen: `ask for more, the universe isn't on a budget` → `ask-for-more-the-universe-isnt-on-a-budget.mdx` (`slugify` in `astro.config.mjs`).
+
+**Drafts.** `draft: true` keeps a piece out of the built site; it still shows in `bun dev`.
+
 **Placing it.** The map opens centered on `(0, 0)`. A plant's `x, y` is where its stem meets the ground; the drawing grows up from there and the title sits just below. Plant new pieces near the ones they talk to. The field grows to fit, so anything placed far out is still reachable by dragging.
 
 **Giving it a toy.** Put the piece's own components in `src/pieces/<slug>/` and import them from the MDX:
 
 ```mdx
-import Phyllotaxis from '../../pieces/golden-angle/Phyllotaxis.astro';
+import Toy from '../../pieces/<slug>/Toy.astro';
 
-<Phyllotaxis />
+<Toy />
 ```
 
-Toys so far are vanilla custom elements in an Astro `<script>` with scoped styles (see `src/pieces/golden-angle/`). When a piece wants a framework, add that Astro integration then (`bunx astro add svelte`, etc.); Astro mixes frameworks per island.
+Start toys as vanilla custom elements in an Astro `<script>` with scoped styles. When a piece wants a framework, add that Astro integration then (`bunx astro add svelte`, etc.); Astro mixes frameworks per island.
 
 ## Develop
 

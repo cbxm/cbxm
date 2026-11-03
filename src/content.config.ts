@@ -14,6 +14,8 @@ const garden = defineCollection({
     x: z.number(),
     y: z.number(),
     description: z.string().optional(),
+    /** Drafts show up in `bun dev` but are left out of the built site. */
+    draft: z.boolean().default(false),
   }),
 });
 
