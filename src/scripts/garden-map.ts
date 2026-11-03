@@ -72,6 +72,7 @@ export function plantGardenMap() {
   const setFolded = (folded: boolean) => {
     legend?.classList.toggle('is-folded', folded);
     fold?.setAttribute('aria-expanded', String(!folded));
+    fold?.setAttribute('aria-label', folded ? 'show the list' : 'hide the list');
   };
   try {
     setFolded(localStorage.getItem(FOLDED_KEY) === 'true');
@@ -80,6 +81,7 @@ export function plantGardenMap() {
   }
   fold?.addEventListener('click', () => {
     const folded = fold.getAttribute('aria-expanded') === 'true';
+    legend?.classList.add('is-turning');
     setFolded(folded);
     try {
       localStorage.setItem(FOLDED_KEY, String(folded));

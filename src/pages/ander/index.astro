@@ -17,7 +17,7 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
     <section class="index" aria-labelledby="index-title">
       <div class="index-head">
         <h1 id="index-title">meander</h1>
-        <button class="fold" type="button" aria-labelledby="index-title" aria-expanded="true" aria-controls="index-body">
+        <button class="fold" type="button" aria-label="hide the list" aria-expanded="true" aria-controls="index-body">
           <svg class="chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
             <path d="M2.5 7.75 6 4.25l3.5 3.5" />
           </svg>
@@ -225,6 +225,10 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'shor
       stroke-width: 1.5;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    /* Only turns once the reader folds or unfolds it, not when a remembered state is restored. */
+    .is-turning .chevron {
       transition: rotate 0.25s var(--ease-out);
     }
 

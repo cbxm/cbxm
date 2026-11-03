@@ -153,7 +153,12 @@ const roots = (() => {
     const key = `${a} ${b}`;
     if (grown.has(key)) return [];
     grown.add(key);
-    return [{ ...link, d: root(base.get(a)!, base.get(b)!, key) }];
+    const [from, to] = [base.get(a)!, base.get(b)!];
+    if (from.x === to.x && from.y === to.y) {
+      console.warn(`[garden] ${a} and ${b} are linked but planted at the same x, y, so no root joins them`);
+      return [];
+    }
+    return [{ ...link, d: root(from, to, key) }];
   });
 })();
 
@@ -230,18 +235,19 @@ const Tag = interactive ? 'a' : 'span';
   }
 
   .root {
-    opacity: 0.4;
+    opacity: 0.5;
     transition: opacity 0.3s;
   }
 
+  /* Toward the ink, so roots lighten against the night palette as well as darken by day. */
   .root-body {
-    fill: var(--bark);
+    fill: color-mix(in oklab, var(--bark), var(--ink) 30%);
   }
 
   .root-glow {
     fill: none;
     stroke: var(--accent-soft);
-    stroke-width: 7;
+    stroke-width: 4;
     stroke-linejoin: round;
     opacity: 0;
     transition: opacity 0.3s;
@@ -344,16 +350,22 @@ const Tag = interactive ? 'a' : 'span';
     animation: sway 2.4s ease-in-out infinite;
   }
 
+  /* Plants at the other end of a lit root stir too, more gently and out of step. */
+  .sprig.is-kin :global(.plant) {
+    --sway: 0.5;
+    animation: sway 3.1s ease-in-out infinite;
+  }
+
   @keyframes sway {
     0%,
     100% {
       transform: rotate(0deg);
     }
     30% {
-      transform: rotate(2.5deg);
+      transform: rotate(calc(2.5deg * var(--sway, 1)));
     }
     70% {
-      transform: rotate(-2deg);
+      transform: rotate(calc(-2deg * var(--sway, 1)));
     }
   }
 </style>
