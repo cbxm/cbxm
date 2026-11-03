@@ -82,13 +82,16 @@ export function placeViewer(zones: Record<string, number[] | undefined>, version
  * - `--rising`: 1 before solar noon, 0 after
  * - `--sky-clock`: seconds into the hour at first light, so drifting clouds pick up where the last page left them
  * - `data-sky`: `day`, `dawn`, `dusk`, or `night`
+ * - `data-theme`: the saved theme, read on the first call or when `rereadTheme` asks
+ * - `data-sky-preview`: while `?sky=` asks for a time
  *
  * and sets <meta name="theme-color">. tokens.css turns the rest into the palette. The `light`
- * theme holds the ramps at noon and the `dark` theme at deep night, whatever the sun is doing.
- * `?sky=HH:MM` shows today at that time and `?sky=night` the middle of tonight, both under the
- * `dynamic` theme. The sun comes from a low-precision solar formula, good to about 0.01°.
+ * theme holds the ramps at noon, with no dusk glow or reddened sun, and the `dark` theme at deep
+ * night, whatever the sun is doing. `?sky=HH:MM` shows today at that time and `?sky=night` the
+ * middle of tonight, both under the `dynamic` theme. The sun comes from a low-precision solar
+ * formula, good to about 0.01°.
  */
-export function lightSky(): SkyFix {
+export function lightSky(rereadTheme = false): SkyFix {
   const RAD = Math.PI / 180;
   const root = document.documentElement;
   const unit = (n: number) => Math.min(1, Math.max(0, n));
@@ -103,12 +106,13 @@ export function lightSky(): SkyFix {
     lon = -standardOffset / 4;
   }
 
-  if (!root.dataset.theme) {
-    let saved;
+  if (rereadTheme || !root.dataset.theme) {
     try {
-      saved = localStorage.getItem('sky-theme');
-    } catch {}
-    root.dataset.theme = saved === 'light' || saved === 'dark' ? saved : 'dynamic';
+      const saved = localStorage.getItem('sky-theme');
+      root.dataset.theme = saved === 'light' || saved === 'dark' ? saved : 'dynamic';
+    } catch {
+      root.dataset.theme ??= 'dynamic';
+    }
   }
 
   const date = new Date();
@@ -117,7 +121,9 @@ export function lightSky(): SkyFix {
   if (hhmm) date.setHours(Number(hhmm[1]), Number(hhmm[2]), 0, 0);
   else if (asked === 'night')
     date.setTime(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate() + 1) - (lon / 15) * 36e5);
-  const theme = (hhmm || asked === 'night' ? 'dynamic' : root.dataset.theme) as Theme;
+  const preview = Boolean(hhmm) || asked === 'night';
+  root.toggleAttribute('data-sky-preview', preview);
+  const theme = (preview ? 'dynamic' : root.dataset.theme) as Theme;
 
   const d = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / 864e5;
   const g = (357.529 + 0.98560028 * d) * RAD;
@@ -149,7 +155,7 @@ export function lightSky(): SkyFix {
   root.style.setProperty('--low', low.toFixed(3));
   root.style.setProperty('--deep', deep.toFixed(3));
   root.style.setProperty('--glow', glow.toFixed(3));
-  root.style.setProperty('--sunset', unit(1 - alt / 20).toFixed(3));
+  root.style.setProperty('--sunset', (theme === 'light' ? 0 : unit(1 - alt / 20)).toFixed(3));
   root.style.setProperty('--sun-x', Math.min(1.2, Math.max(-0.2, 0.5 + ahead / 180)).toFixed(3));
   root.style.setProperty('--rising', rising ? '1' : '0');
   if (!root.style.getPropertyValue('--sky-clock'))

@@ -142,6 +142,11 @@ const lightScript = inline(`(${lightSky})();`);
     display: inline-flex;
   }
 
+  /* `?sky=` previews a time under the dynamic theme, so there is no theme to change. */
+  :global(html[data-sky-preview]) .theme {
+    display: none;
+  }
+
   .theme:hover {
     color: var(--ink);
   }

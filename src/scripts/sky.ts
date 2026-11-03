@@ -415,8 +415,16 @@ if (sky && label) {
     },
     60_000 - (Date.now() % 60_000),
   );
+  // Back in view, or restored from the back-forward cache: another tab may have changed the theme.
+  const retheme = () => {
+    draw(lightSky(true));
+    nameToggle();
+  };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') tick();
+    if (document.visibilityState === 'visible') retheme();
+  });
+  addEventListener('pageshow', (event) => {
+    if (event.persisted) retheme();
   });
   let frame = 0;
   addEventListener('resize', () => {
