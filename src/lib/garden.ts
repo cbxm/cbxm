@@ -1,4 +1,5 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { linkTargets } from './wikilinks.mjs';
 
 export type Piece = CollectionEntry<'garden'>;
 
@@ -9,6 +10,30 @@ export async function getGarden(): Promise<Piece[]> {
 }
 
 export const pieceHref = (piece: Piece) => `/ander/${piece.id}`;
+
+export interface Link {
+  from: string;
+  to: string;
+}
+
+/**
+ * Every `[[wikilink]]` between the given pieces, by slug. Links to pieces not in the list are left out,
+ * so in the built site links to drafts disappear along with the drafts.
+ */
+export function gardenLinks(pieces: Piece[]): Link[] {
+  const planted = new Set(pieces.map((p) => p.id));
+  return pieces.flatMap((piece) =>
+    linkTargets(piece.body ?? '')
+      .filter((to) => to !== piece.id && planted.has(to))
+      .map((to) => ({ from: piece.id, to })),
+  );
+}
+
+/** The pieces that link to `piece`, in the order given. */
+export function backlinks(piece: Piece, pieces: Piece[]): Piece[] {
+  const from = new Set(gardenLinks(pieces).flatMap((link) => (link.to === piece.id ? [link.from] : [])));
+  return pieces.filter((p) => from.has(p.id));
+}
 
 /** Margin of open ground around the outermost plants, in map pixels. */
 const MARGIN = { x: 900, y: 700 };
