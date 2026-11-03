@@ -43,6 +43,7 @@ const PLANETS = [Body.Mercury, Body.Venus, Body.Mars, Body.Jupiter, Body.Saturn,
 /** Planets fainter than this (Uranus, Neptune, Pluto) show as the faintest stars do. */
 const FAINTEST_PLANET = 6;
 
+/** Labels for the figures, by the names of their zodiac signs. */
 const FIGURE_NAMES: Record<string, string> = {
   Ari: 'aries',
   Tau: 'taurus',
@@ -51,9 +52,9 @@ const FIGURE_NAMES: Record<string, string> = {
   Leo: 'leo',
   Vir: 'virgo',
   Lib: 'libra',
-  Sco: 'scorpius',
+  Sco: 'scorpio',
   Sgr: 'sagittarius',
-  Cap: 'capricornus',
+  Cap: 'capricorn',
   Aqr: 'aquarius',
   Psc: 'pisces',
 };
