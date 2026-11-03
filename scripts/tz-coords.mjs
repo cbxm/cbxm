@@ -42,17 +42,22 @@ const coords = new Map();
 for (const [, iso, zone] of rows(zone1970Path)) coords.set(zone, parseCoords(iso));
 for (const [, iso, zone] of rows(zonePath)) if (!coords.has(zone)) coords.set(zone, parseCoords(iso));
 
+// `Link TARGET NAME #= TARGET1`: TARGET1, when given, is the name the link really means
+// (Africa/Asmera means Africa/Asmara, which zone.tab places in Eritrea), and TARGET is the
+// zone it shares rules with (Africa/Nairobi). Prefer the place.
 const links = readFileSync(backwardPath, 'utf8')
   .split('\n')
-  .map((line) => line.replace(/#.*/, '').trim().split(/\s+/))
-  .filter((f) => f[0] === 'Link')
-  .map(([, target, name]) => [target, name]);
+  .flatMap((line) => {
+    const m = /^Link\s+(\S+)\s+(\S+)(?:\s+#=\s*(\S+))?/.exec(line);
+    return m ? [{ name: m[2], targets: m[3] ? [m[3], m[1]] : [m[1]] }] : [];
+  });
 
 // Links can chain, so resolve until nothing new lands.
 for (let added = true; added; ) {
   added = false;
-  for (const [target, name] of links) {
-    if (!coords.has(name) && coords.has(target)) {
+  for (const { name, targets } of links) {
+    const target = targets.find((t) => coords.has(t));
+    if (!coords.has(name) && target) {
       coords.set(name, coords.get(target));
       added = true;
     }
