@@ -43,6 +43,8 @@
   --measure: 65ch;
   --gutter: clamp(1.25rem, 5vw, 3rem);
   --header-height: 4rem;
+  /* The header's sky on the home page and the map; elsewhere it is a strip of --header-height. */
+  --sky-band: clamp(9rem, 24vh, 13rem);
   --radius: 3px;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -55,9 +57,9 @@
  * The palette has two modes, because a crossfade from light paper to dark passes through
  * mid-tones that no ink reads on. Through the day and twilight the paper warms as the sun
  * drops (--low). Night begins with the sun 4° down: the lamp comes on, the ink turns light,
- * and the paper deepens from twilight to full dark (--deep). The glow along the horizon and
- * the stars change continuously across the switch. lightSky() mixes theme-color from the
- * same --paper ends, so change them together.
+ * and the paper deepens from twilight to full dark (--deep). The sky in the header changes
+ * continuously across the switch. lightSky() mixes theme-color from the same --paper ends,
+ * so change them together.
  */
 html[data-sky] {
   /* Day values from :root, warmed toward the lamp. */
@@ -76,6 +78,23 @@ html[data-sky] {
   --moon-rim: rgb(42 37 31 / 0.22);
   --moon-glow: transparent;
   --star-line: transparent;
+  /* The halo around whatever in the sky is under the pointer. */
+  --sky-halo: color-mix(in srgb, var(--accent) 35%, transparent);
+
+  /* Planets in their own colours; stars by B-V colour index, blue-white to orange. */
+  --planet-mercury: #d8cfc0;
+  --planet-venus: #fff8e6;
+  --planet-mars: #f08a5d;
+  --planet-jupiter: #f6e7c8;
+  --planet-saturn: #ead39c;
+  --planet-uranus: #c4e4e6;
+  --planet-neptune: #a9bff2;
+  --planet-pluto: #d9c3ae;
+  --star-0: #dfe6ff;
+  --star-1: #f4f3ff;
+  --star-2: #fff4e2;
+  --star-3: #ffe4bf;
+  --star-4: #ffd0a0;
 }
 
 html[data-sky='night'] {
@@ -108,4 +127,5 @@ html[data-sky='night'] {
   --moon-rim: transparent;
   --moon-glow: rgb(242 234 214 / 0.16);
   --star-line: rgb(236 228 212 / 0.26);
+  --sky-halo: rgb(242 234 214 / 0.32);
 }

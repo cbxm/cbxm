@@ -8,9 +8,11 @@ interface Props {
   description?: string;
   /** On wide screens with JS, the page fills the viewport below the header and does not scroll (the map). */
   fullBleed?: boolean;
+  /** The header's sky is a tall band rather than a strip. */
+  tallSky?: boolean;
 }
 
-const { title, description = 'A writing playground that grows.', fullBleed = false } = Astro.props;
+const { title, description = 'A writing playground that grows.', fullBleed = false, tallSky = false } = Astro.props;
 const pageTitle = title ? `${title} · cbxm` : 'cbxm';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const path = Astro.url.pathname;
@@ -43,16 +45,17 @@ const lightScript = inline(`(${lightSky})();`);
     <script is:inline set:html={lightScript} />
   </head>
   <body class:list={{ 'full-bleed': fullBleed }}>
-    <div class="sky" aria-hidden="true">
-      <span class="cloud" style="--x: 8vw; --y: 9%; --s: 1.1; --t: 720s; --o: 0s"></span>
-      <span class="cloud" style="--x: 60vw; --y: 19%; --s: 0.8; --t: 600s; --o: 380s"></span>
-      <span class="cloud" style="--x: 34vw; --y: 31%; --s: 0.6; --t: 900s; --o: 610s"></span>
-    </div>
-    <header class="site-header">
+    <header class:list={['site-header', { 'tall-sky': tallSky }]}>
+      <div class="sky" data-band={tallSky ? 'tall' : 'strip'} aria-hidden="true">
+        <span class="cloud" style="--x: 8vw; --y: 6%; --s: 1.1; --t: 720s; --o: 0s"></span>
+        <span class="cloud" style="--x: 60vw; --y: 22%; --s: 0.8; --t: 600s; --o: 380s"></span>
+        <span class="cloud" style="--x: 34vw; --y: 40%; --s: 0.6; --t: 900s; --o: 610s"></span>
+      </div>
       <a class="wordmark" href="/" aria-label="cbxm, home">cbxm</a>
       <nav aria-label="Site">
         <a href="/ander" aria-current={inGarden ? 'page' : undefined}>meander</a>
       </nav>
+      <span class="sky-label" aria-hidden="true" hidden></span>
     </header>
     <main>
       <slot />
@@ -83,6 +86,21 @@ const lightScript = inline(`(${lightSky})();`);
     gap: var(--space-4);
     min-height: var(--header-height);
     padding: var(--space-3) var(--gutter);
+  }
+
+  :global(html[data-sky]) .tall-sky {
+    min-height: var(--sky-band);
+  }
+
+  /* Above the sky, which only takes the pointer over its sun, moon, planets, and figures, and
+     haloed in paper so the stars behind don't break up the letters. */
+  .wordmark,
+  nav {
+    position: relative;
+    z-index: 1;
+    text-shadow:
+      0 0 6px var(--paper),
+      0 0 2px var(--paper);
   }
 
   .wordmark {
