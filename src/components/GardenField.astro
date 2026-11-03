@@ -170,6 +170,8 @@ const Tag = interactive ? 'a' : 'span';
   style={`width: ${bounds.width}px; height: ${bounds.height}px; --origin-x: ${originX}px; --origin-y: ${originY}px;`}
   data-origin-x={originX}
   data-origin-y={originY}
+  data-width={bounds.width}
+  data-height={bounds.height}
 >
   <svg class="roots" width={bounds.width} height={bounds.height} aria-hidden="true">
     {

@@ -7,8 +7,9 @@
  *
  * Zoom is CSS `zoom` on the field, driven by its `--zoom` property, so the field
  * lays out at the zoomed size: text stays sharp and the scroll extents follow.
- * Positions read from the field (offsetLeft, data-origin-*) are in unzoomed field
- * pixels; scroll offsets are in screen pixels, which is the same thing times the zoom.
+ * Positions read from the field (offsetLeft, data-origin-*, data-width/height) are in
+ * unzoomed field pixels; scroll offsets are in screen pixels, which is the same thing
+ * times the zoom.
  */
 
 const DRAG_THRESHOLD = 4;
@@ -42,7 +43,8 @@ export function plantGardenMap() {
   const originX = Number(field.dataset.originX);
   const originY = Number(field.dataset.originY);
 
-  const fieldSize = { width: field.offsetWidth, height: field.offsetHeight };
+  const fieldWidth = Number(field.dataset.width);
+  const fieldHeight = Number(field.dataset.height);
   let zoom = 1;
 
   const sprigFor = (slug: string | undefined) =>
@@ -188,7 +190,7 @@ export function plantGardenMap() {
 
   /** Smallest zoom: MIN_ZOOM, or where the field just fills the map if that comes first. Never above 1. */
   const minZoom = () =>
-    Math.min(1, Math.max(MIN_ZOOM, map.clientWidth / fieldSize.width, map.clientHeight / fieldSize.height));
+    Math.min(1, Math.max(MIN_ZOOM, map.clientWidth / fieldWidth, map.clientHeight / fieldHeight));
 
   /** Zoom to `next`, keeping the field point under (clientX, clientY) where it is on screen. */
   const zoomAt = (next: number, clientX: number, clientY: number) => {
@@ -197,13 +199,25 @@ export function plantGardenMap() {
     const rect = map.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    const fieldX = (map.scrollLeft + x) / zoom;
-    const fieldY = (map.scrollTop + y) / zoom;
+    const before = { left: map.scrollLeft, top: map.scrollTop };
+    const fieldX = (before.left + x) / zoom;
+    const fieldY = (before.top + y) / zoom;
     zoom = next;
     field.style.setProperty('--zoom', String(zoom));
     map.scrollLeft = fieldX * zoom - x;
     map.scrollTop = fieldY * zoom - y;
+    // A drag under way carries on from where the zoom moved the view.
+    if (drag) {
+      drag.left += map.scrollLeft - before.left;
+      drag.top += map.scrollTop - before.top;
+    }
   };
+
+  // A map that grows can outgrow a zoomed-out field; zoom back in until the field fills it.
+  new ResizeObserver(() => {
+    const rect = map.getBoundingClientRect();
+    zoomAt(zoom, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }).observe(map);
 
   // A plain wheel or two-finger swipe scrolls natively. With ctrl held, which is also how
   // Chromium and Firefox report a trackpad pinch, it zooms the map instead of the page.
