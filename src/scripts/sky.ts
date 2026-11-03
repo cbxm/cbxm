@@ -30,7 +30,7 @@ import {
   VectorFromSphere,
 } from 'astronomy-engine';
 import zodiac from '../lib/sky-stars.json';
-import { lightSky, type SkyFix } from './sky-light';
+import { lightSky, type SkyFix, type Theme } from './sky-light';
 
 const RAD = Math.PI / 180;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -197,8 +197,8 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
 
   let lit: string | undefined;
 
-  // The header's wordmark and nav (Base.astro), which a label must not cover.
-  const obstacles = [...(label.parentElement?.querySelectorAll('.wordmark, nav') ?? [])];
+  // The header's wordmark, nav, and theme button (Base.astro), which a label must not cover.
+  const obstacles = [...(label.parentElement?.querySelectorAll('.wordmark, .header-end') ?? [])];
 
   /** Hangs the label above the lit item, or below it when the room above is off the band or taken. */
   const placeLabel = () => {
@@ -247,7 +247,8 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
   return function draw(fix: SkyFix) {
     const time = MakeTime(fix.date);
     const observer = new Observer(fix.lat, fix.lon, 0);
-    const limit = faintest(fix.alt);
+    // The light theme keeps a day sky, the dark theme a sky at full dark.
+    const limit = fix.theme === 'light' ? -Infinity : faintest(fix.theme === 'dark' ? -18 : fix.alt);
     const width = sky.clientWidth;
     const height = sky.clientHeight;
 
@@ -338,7 +339,7 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
     }
 
     const sunAt = locate(Body.Sun);
-    const sunVisible = inView(sunAt, 2);
+    const sunVisible = fix.theme !== 'dark' && inView(sunAt, 2);
     show(sun, sunVisible);
     show(sunItem.hit, sunVisible);
     place(sun, sunAt, 'x', 'y');
@@ -401,5 +402,27 @@ if (sky && label) {
   addEventListener('resize', () => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(tick);
+  });
+
+  // The theme button cycles light → dynamic → dark and saves the choice for later pages.
+  const toggle = document.querySelector<HTMLButtonElement>('.theme');
+  const themes: Theme[] = ['light', 'dynamic', 'dark'];
+  const root = document.documentElement;
+  const after = (theme: Theme) => themes[(themes.indexOf(theme) + 1) % themes.length];
+  const nameToggle = () => {
+    const theme = root.dataset.theme as Theme;
+    const name = `${theme} theme, switch to ${after(theme)}`;
+    toggle?.setAttribute('aria-label', name);
+    if (toggle) toggle.title = name;
+  };
+  nameToggle();
+  toggle?.addEventListener('click', () => {
+    const theme = after(root.dataset.theme as Theme);
+    root.dataset.theme = theme;
+    try {
+      localStorage.setItem('sky-theme', theme);
+    } catch {}
+    nameToggle();
+    tick();
   });
 }
