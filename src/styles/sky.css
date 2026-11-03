@@ -11,12 +11,13 @@
 }
 
 html[data-sky] .sky {
+  --sky-fade: 78%;
   display: block;
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 var(--sky-fade), transparent);
   background:
     radial-gradient(
       ellipse 40% 140% at calc(var(--sun-x) * 100%) 50%,
@@ -45,7 +46,7 @@ html[data-sky] .sky {
     stroke-width 0.2s;
 }
 
-/* Flattened into the strip, the figures' lines are noise; they show only for the figure under the pointer. */
+/* The strip crops the figures to a few degrees of latitude, where their lines are noise; they show only for the figure under the pointer. */
 .sky[data-band='strip'] .sky-lines line:not(.is-lit) {
   visibility: hidden;
 }

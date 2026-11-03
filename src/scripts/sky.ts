@@ -7,10 +7,11 @@
  * The band is the zodiac: the half of the ecliptic that is above the horizon, drawn in ecliptic
  * longitude across and ecliptic latitude up at the same pixels per degree both ways, so the
  * figures keep their shapes. The ecliptic and the horizon are both great circles, so exactly
- * 180° of longitude is up at any moment, from the point rising in the east to the point setting
- * in the west. Facing the equator from the north, the rising point is at the left edge and north
- * is up; from the south (by the same facing rule as sky-light.ts) the picture turns half round.
- * As the sky turns the window slides, so everything rises at one edge and sets at the other.
+ * 180° of longitude is up at any moment, normally from the point rising in the east to the point
+ * setting in the west (see leadingEnd for the polar exception). Facing the equator from the
+ * north, the greater longitude is at the left edge and north is up; from the south (by the same
+ * facing rule as sky-light.ts) the picture turns half round. As the sky turns the window slides,
+ * so everything rises at one edge and sets at the other.
  *
  * Normally 180° spans the band's width. A band too short to show ±20° of latitude at that scale
  * (wide screens, and the strip) crops latitude; a band too narrow (phones) shows less longitude,
@@ -103,19 +104,18 @@ function svg<K extends keyof SVGElementTagNameMap>(name: K, attrs: Record<string
 const pct = (fraction: number) => `${(fraction * 100).toFixed(3)}%`;
 
 /**
- * Ecliptic longitude (true ecliptic of date) of the point where the ecliptic crosses the eastern
- * horizon: where the horizon's plane meets the ecliptic's, on the east side.
+ * Ecliptic longitude (true ecliptic of date) where the half of the ecliptic above the horizon
+ * begins: its end with the greater longitude. That is the point rising in the east, except at
+ * times inside the polar circles, where the ecliptic can turn so the rising point is the lesser.
  */
-function risingPoint(time: AstroTime, observer: Observer, toEcliptic: RotationMatrix) {
+function leadingEnd(time: AstroTime, observer: Observer, toEcliptic: RotationMatrix) {
+  // The zenith (horizontal axes: x north, y west, z zenith) in ecliptic coordinates.
   const fromHorizon = InverseRotation(Rotation_EQJ_HOR(time, observer));
-  const toLocalEcliptic = (x: number, y: number, z: number) =>
-    RotateVector(toEcliptic, RotateVector(fromHorizon, new Vector(x, y, z, time)));
-  // Horizontal axes: x north, y west, z zenith.
-  const zenith = toLocalEcliptic(0, 0, 1);
-  const east = toLocalEcliptic(0, -1, 0);
-  // The line along both planes is the ecliptic pole (0, 0, 1) crossed with the zenith.
-  const side = -zenith.y * east.x + zenith.x * east.y < 0 ? -1 : 1;
-  return Math.atan2(side * zenith.x, -side * zenith.y) / RAD;
+  const zenith = RotateVector(toEcliptic, RotateVector(fromHorizon, new Vector(0, 0, 1, time)));
+  // The ecliptic's highest point is at longitude atan2(zenith.y, zenith.x), and the half above
+  // the horizon spans 90° either side of it. The ecliptic pole (0, 0, 1) crossed with the zenith
+  // points 90° past that point.
+  return Math.atan2(zenith.x, -zenith.y) / RAD;
 }
 
 function show(node: SVGElement | HTMLElement, visible: boolean) {
@@ -141,6 +141,8 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
   const strip = sky.dataset.band === 'strip';
   const sunR = strip ? 9 : 15;
   const moonR = strip ? 8 : 12;
+  /** Where the band starts fading into the page, as a fraction of its height (sky.css). */
+  const fade = parseFloat(getComputedStyle(sky).getPropertyValue('--sky-fade')) / 100;
 
   const field = svg('svg', { class: 'sky-bodies' });
   const defs = svg('defs', {}, field);
@@ -299,26 +301,34 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
     const height = sky.clientHeight;
     const scale = Math.max(width / 180, height / (2 * SHOWN_LATITUDE));
     const toEcliptic = Rotation_EQJ_ECT(time);
-    const rising = risingPoint(time, observer, toEcliptic);
+    const start = leadingEnd(time, observer, toEcliptic);
     const north = fix.facing === 180;
 
     /**
      * Position as fractions of the band. `along` is degrees of ecliptic longitude from the
-     * window's middle, the ecliptic's highest point; the window runs from -90 (rising) to 90.
+     * window's middle, the ecliptic's highest point; the window runs from -90 (its start) to 90.
      */
     const project = (sphere: { lon: number; lat: number }) => {
-      const along = ((((rising - sphere.lon - 90) % 360) + 540) % 360) - 180;
+      const along = ((((start - sphere.lon - 90) % 360) + 540) % 360) - 180;
       const x = 0.5 + (along * scale) / width;
       const y = ECLIPTIC_Y - (sphere.lat * scale) / height;
       return { x: north ? x : 1 - x, y: north ? y : 2 * ECLIPTIC_Y - y, along };
     };
+    const inWindow = (at: { x: number; along: number }, slack = 0) =>
+      Math.abs(at.along) <= 90 + slack && at.x > -0.02 && at.x < 1.02;
     const inView = (at: { x: number; y: number; along: number }, slack = 0) =>
-      Math.abs(at.along) <= 90 + slack && at.x > -0.02 && at.x < 1.02 && at.y > -0.02 && at.y < 1.02;
+      inWindow(at, slack) && at.y > -0.02 && at.y < 1.02;
     const ecliptic = (vector: Vector) => SphereFromVector(RotateVector(toEcliptic, vector));
-    const locate = (body: Body) => {
+    /**
+     * A body's place. Bodies are never cropped: one whose latitude falls outside the band (often
+     * in the strip) is pinned at the edge it would cross, clear of the fade.
+     */
+    const locate = (body: Body, r: number) => {
       const eq = Equator(body, time, observer, false, true);
       const sphere = ecliptic(VectorFromSphere(new Spherical(eq.dec, eq.ra * 15, 1), time));
-      return { ...project(sphere), lon: sphere.lon, lat: sphere.lat };
+      const at = project(sphere);
+      const y = clamp(at.y, (r + 2) / height, Math.max((r + 2) / height, fade - r / height));
+      return { ...at, y, lon: sphere.lon, lat: sphere.lat };
     };
     const anchor = (item: Item, at: { x: number; y: number }, rx: number, ry = rx) => {
       item.x = at.x * width;
@@ -378,32 +388,35 @@ function raiseSky(sky: HTMLElement, label: HTMLElement) {
     }
 
     for (const { body, node, item, hit } of planets) {
-      const at = locate(body);
       const mag = Math.min(FAINTEST_PLANET, Illumination(body, time).mag);
+      const r = clamp(2.4 - 0.3 * mag, 1.6, 3.4);
+      const at = locate(body, r);
       const opacity = glimmer(mag, limit);
-      const visible = opacity > 0.02 && inView(at, 1);
+      const visible = opacity > 0.02 && inWindow(at, 1);
       show(node, visible);
       show(item.hit, visible);
       if (visible) {
         place(node, at);
         place(hit, at);
-        node.setAttribute('r', clamp(2.4 - 0.3 * mag, 1.6, 3.4).toFixed(2));
+        node.setAttribute('r', r.toFixed(2));
         node.setAttribute('opacity', opacity.toFixed(2));
         anchor(item, at, 8);
       }
     }
 
-    // On the ecliptic, the sun is in the window exactly while it is up.
-    const sunAt = locate(Body.Sun);
-    const sunVisible = fix.theme !== 'dark' && inView(sunAt, 1);
+    // On the ecliptic, the sun is in the window exactly while it is up. Its glow (sky.css) sits
+    // where it is along the band's real span, which the <head> copy of lightSky() can only guess.
+    const sunAt = locate(Body.Sun, sunR);
+    document.documentElement.style.setProperty('--sun-x', clamp(sunAt.x, -0.2, 1.2).toFixed(3));
+    const sunVisible = fix.theme !== 'dark' && inWindow(sunAt, 1);
     show(sun, sunVisible);
     show(sunItem.hit, sunVisible);
     place(sun, sunAt, 'x', 'y');
     place(sunHit, sunAt);
     anchor(sunItem, sunAt, sunR + 6);
 
-    const moonAt = locate(Body.Moon);
-    const moonVisible = inView(moonAt, 1);
+    const moonAt = locate(Body.Moon, moonR);
+    const moonVisible = inWindow(moonAt, 1);
     show(moon, moonVisible);
     show(moonItem.hit, moonVisible);
     place(moon, moonAt, 'x', 'y');

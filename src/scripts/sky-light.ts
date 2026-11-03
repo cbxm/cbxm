@@ -138,13 +138,10 @@ export function lightSky(rereadTheme = false): SkyFix {
   root.dataset.facing ??= dec / RAD < lat ? '180' : '0';
   const facing = Number(root.dataset.facing);
 
-  // The ecliptic's rising point, where it crosses the eastern horizon; sky.ts draws the half of
-  // the ecliptic from there to its setting point, and the sun's glow sits where it is in that span.
-  const east = Math.sin(sidereal) * Math.sin(tilt) * Math.sin(phi) + Math.cos(tilt) * Math.cos(phi) < 0 ? -1 : 1;
-  const ascendant = Math.atan2(
-    east * Math.cos(sidereal),
-    -east * (Math.sin(tilt) * Math.tan(phi) + Math.cos(tilt) * Math.sin(sidereal)),
-  );
+  // sky.ts draws the half of the ecliptic above the horizon, starting from its end with the
+  // greater longitude (the rising point, except inside the polar circles at times); the sun's
+  // glow sits where the sun is along that span. sky.ts moves it to match the band's real span.
+  const ascendant = Math.atan2(Math.cos(sidereal), -(Math.sin(tilt) * Math.tan(phi) + Math.cos(tilt) * Math.sin(sidereal)));
   const past = ((((ascendant - ecliptic) / RAD) % 360) + 360) % 360;
   const across = (past > 270 ? past - 360 : past) / 180;
   const sunX = Math.min(1.2, Math.max(-0.2, across));
