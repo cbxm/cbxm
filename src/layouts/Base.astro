@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { lightSky } from '../scripts/sky-light';
 
 interface Props {
   title?: string;
@@ -13,6 +14,9 @@ const pageTitle = title ? `${title} · cbxm` : 'cbxm';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const path = Astro.url.pathname;
 const inGarden = path === '/ander' || path.startsWith('/ander/');
+
+// Runs before first paint, so a night visit never flashes the day palette.
+const bootstrap = `document.documentElement.dataset.js = '';\n(${lightSky})();`;
 ---
 
 <!doctype html>
@@ -29,9 +33,14 @@ const inGarden = path === '/ander' || path.startsWith('/ander/');
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content={title ? 'article' : 'website'} />
     <meta name="theme-color" content="#f3ede1" />
-    <script is:inline>document.documentElement.dataset.js = '';</script>
+    <script is:inline set:html={bootstrap} />
   </head>
   <body class:list={{ 'full-bleed': fullBleed }}>
+    <div class="sky" aria-hidden="true">
+      <span class="cloud" style="--x: 8vw; --y: 9%; --s: 1.1; --t: 720s; --o: 0s"></span>
+      <span class="cloud" style="--x: 60vw; --y: 19%; --s: 0.8; --t: 600s; --o: 380s"></span>
+      <span class="cloud" style="--x: 34vw; --y: 31%; --s: 0.6; --t: 900s; --o: 610s"></span>
+    </div>
     <header class="site-header">
       <a class="wordmark" href="/" aria-label="cbxm, home">cbxm</a>
       <nav aria-label="Site">
@@ -52,6 +61,10 @@ const inGarden = path === '/ander' || path.startsWith('/ander/');
     }
   </body>
 </html>
+
+<script>
+  import '../scripts/sky';
+</script>
 
 <style>
   .site-header {
