@@ -14,7 +14,8 @@
   "dependencies": {
     "@astrojs/markdown-satteri": "0.4.6",
     "@astrojs/mdx": "^8.1.2",
-    "astro": "^7.4.5"
+    "astro": "^7.4.5",
+    "astronomy-engine": "^2.1.19"
   },
   "devDependencies": {
     "cf": "1.0.0-beta.27",
