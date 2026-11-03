@@ -1,0 +1,125 @@
+---
+import Base from '../layouts/Base.astro';
+import GardenField from '../components/GardenField.astro';
+import { getGarden } from '../lib/garden';
+
+const pieces = await getGarden();
+
+const elsewhere = [
+  { label: 'email', href: 'mailto:hello@cbxm.me' },
+  { label: 'github', href: 'https://github.com/' },
+];
+---
+
+<Base>
+  <div class="home">
+    <section class="handshake prose" aria-labelledby="hello">
+      <h1 id="hello">Hi, I'm Caden.</h1>
+      <p>
+        This is a placeholder handshake: a few sentences about who I am and what I'm up to right now, written in my own
+        voice.
+      </p>
+      <p>
+        The rest of the site is a garden. Pieces of writing, some with small toys inside, planted where they seem to
+        fit and left to grow.
+      </p>
+    </section>
+
+    <a class="glimpse" href="/meander">
+      <span class="window" aria-hidden="true">
+        <GardenField pieces={pieces} />
+      </span>
+      <span class="caption">wander into the garden &rarr;</span>
+    </a>
+
+    <section class="elsewhere" aria-labelledby="elsewhere-title">
+      <h2 id="elsewhere-title" class="meta">elsewhere</h2>
+      <ul>
+        {
+          elsewhere.map((link) => (
+            <li>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .home {
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding: var(--space-6) var(--gutter) 0;
+  }
+
+  h1 {
+    font-size: clamp(var(--text-xl), 6vw, 3.25rem);
+    margin-bottom: var(--space-4);
+  }
+
+  .handshake p {
+    font-size: var(--text-lg);
+    line-height: 1.5;
+  }
+
+  .glimpse {
+    display: block;
+    margin-top: var(--space-6);
+    text-decoration: none;
+  }
+
+  .window {
+    position: relative;
+    display: block;
+    height: 260px;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent, #000 3rem, #000 calc(100% - 2rem), transparent),
+      linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+    mask-composite: intersect;
+  }
+
+  /* Center the window on the map's origin. Narrow screens see the garden from further away. */
+  .window :global(.field) {
+    --glimpse-scale: 1;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: var(--origin-x) var(--origin-y);
+    translate: calc(-1 * var(--origin-x)) calc(-1 * var(--origin-y));
+    scale: var(--glimpse-scale);
+  }
+
+  @media (max-width: 40rem) {
+    .window :global(.field) {
+      --glimpse-scale: 0.62;
+    }
+  }
+
+  .caption {
+    display: block;
+    margin-top: var(--space-2);
+    text-align: center;
+    font-style: italic;
+    color: var(--ink-soft);
+    transition: color 0.2s;
+  }
+
+  .glimpse:hover .caption {
+    color: var(--accent);
+  }
+
+  .elsewhere {
+    margin-top: var(--space-6);
+  }
+
+  .elsewhere ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-2);
+  }
+</style>

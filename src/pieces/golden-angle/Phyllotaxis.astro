@@ -1,0 +1,185 @@
+---
+/**
+ * Seeds placed one at a time, each turned a fixed angle from the last and pushed
+ * outward with the square root of its index (Vogel's model of a sunflower head).
+ * The slider sets the turn.
+ */
+---
+
+<figure class="toy">
+  <phyllotaxis-toy>
+    <canvas role="img" aria-label="A disc of seeds arranged by the chosen divergence angle."></canvas>
+    <div class="controls">
+      <label for="phyllotaxis-angle">turn per seed</label>
+      <input id="phyllotaxis-angle" type="range" min="130" max="145" step="0.01" value="135" />
+      <output for="phyllotaxis-angle">135.00&deg;</output>
+      <button type="button">golden</button>
+    </div>
+  </phyllotaxis-toy>
+  <figcaption>Drag the turn. Near 137.5&deg; the spokes vanish and the seeds pack evenly.</figcaption>
+  <noscript><p class="noscript">This toy needs JavaScript.</p></noscript>
+</figure>
+
+<script>
+  const GOLDEN = 180 * (3 - Math.sqrt(5));
+  const SEEDS = 480;
+
+  const hexToRgb = (hex: string) => {
+    const n = parseInt(hex.trim().slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+
+  class PhyllotaxisToy extends HTMLElement {
+    #canvas!: HTMLCanvasElement;
+    #input!: HTMLInputElement;
+    #output!: HTMLOutputElement;
+    #tween = 0;
+    #frame = 0;
+
+    connectedCallback() {
+      this.#canvas = this.querySelector('canvas')!;
+      this.#input = this.querySelector('input')!;
+      this.#output = this.querySelector('output')!;
+
+      this.#input.addEventListener('input', () => this.#schedule());
+      this.querySelector('button')!.addEventListener('click', () => this.#glideTo(GOLDEN));
+      new ResizeObserver(() => this.#schedule()).observe(this.#canvas);
+    }
+
+    get #angle() {
+      return Number(this.#input.value);
+    }
+
+    #schedule() {
+      cancelAnimationFrame(this.#frame);
+      this.#frame = requestAnimationFrame(() => this.#draw());
+    }
+
+    #glideTo(target: number) {
+      cancelAnimationFrame(this.#tween);
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.#input.value = String(target);
+        this.#draw();
+        return;
+      }
+      const from = this.#angle;
+      const start = performance.now();
+      const duration = 900;
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        this.#input.value = String(from + (target - from) * eased);
+        this.#draw();
+        if (t < 1) this.#tween = requestAnimationFrame(step);
+      };
+      this.#tween = requestAnimationFrame(step);
+    }
+
+    #draw() {
+      const canvas = this.#canvas;
+      const size = canvas.clientWidth;
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== Math.round(size * dpr)) {
+        canvas.width = canvas.height = Math.round(size * dpr);
+      }
+      const ctx = canvas.getContext('2d')!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, size, size);
+
+      const styles = getComputedStyle(this);
+      const inner = hexToRgb(styles.getPropertyValue('--leaf-deep'));
+      const outer = hexToRgb(styles.getPropertyValue('--accent'));
+
+      const turn = (this.#angle * Math.PI) / 180;
+      const spacing = (size / 2 - 12) / Math.sqrt(SEEDS);
+      const center = size / 2;
+      for (let i = 0; i < SEEDS; i++) {
+        const r = spacing * Math.sqrt(i);
+        const theta = i * turn;
+        const t = i / SEEDS;
+        const mix = Math.min(1, Math.max(0, (t - 0.3) / 0.5));
+        const [red, green, blue] = inner.map((c, k) => Math.round(c + (outer[k] - c) * mix));
+        ctx.beginPath();
+        ctx.arc(center + r * Math.cos(theta), center + r * Math.sin(theta), spacing * (0.36 + 0.16 * t), 0, Math.PI * 2);
+        ctx.fillStyle = `rgb(${red} ${green} ${blue} / ${0.7 + t * 0.3})`;
+        ctx.fill();
+      }
+      this.#output.value = `${this.#angle.toFixed(2)}°`;
+    }
+  }
+
+  customElements.define('phyllotaxis-toy', PhyllotaxisToy);
+</script>
+
+<style>
+  .toy {
+    padding: var(--space-4);
+    background: var(--paper-light);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+  }
+
+  phyllotaxis-toy {
+    display: block;
+  }
+
+  canvas {
+    width: 100%;
+    max-width: 380px;
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin-top: var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+  }
+
+  input[type='range'] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
+  output {
+    min-width: 6ch;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--ink);
+  }
+
+  button {
+    padding: 0.2em 0.8em;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  @media (max-width: 30rem) {
+    .controls {
+      grid-template-columns: 1fr auto;
+    }
+
+    label {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .noscript {
+    font-style: italic;
+    color: var(--ink-soft);
+  }
+</style>

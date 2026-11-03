@@ -1,0 +1,45 @@
+---
+import Base from '../layouts/Base.astro';
+import Plant from '../components/Plant.astro';
+---
+
+<Base title="Nothing here" description="Nothing has grown at this address.">
+  <div class="lost">
+    <Plant stage="seedling" height="4rem" />
+    <h1>Nothing has grown here yet.</h1>
+    <p>This address is bare ground. Maybe something will come up later.</p>
+    <p class="ways">
+      <a href="/meander">wander the garden</a>
+      <span aria-hidden="true">·</span>
+      <a href="/">go home</a>
+    </p>
+  </div>
+</Base>
+
+<style>
+  .lost {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: var(--measure);
+    margin-inline: auto;
+    padding: var(--space-7) var(--gutter) 0;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: var(--text-xl);
+    font-style: italic;
+  }
+
+  p {
+    color: var(--ink-soft);
+  }
+
+  .ways {
+    display: flex;
+    gap: var(--space-2);
+    font-style: italic;
+  }
+</style>

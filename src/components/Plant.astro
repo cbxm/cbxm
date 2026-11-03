@@ -1,0 +1,148 @@
+---
+import type { Stage } from '../lib/stages';
+
+interface Props {
+  stage: Stage;
+  /** CSS height of the drawing. Width follows from the stage's proportions. */
+  height?: string;
+  class?: string;
+}
+
+const { stage, height, class: className } = Astro.props;
+
+/** Natural height of each stage in map pixels; the drawings are 1.3x their viewBox. */
+const forms = {
+  seedling: { viewBox: '0 0 40 40', height: 52 },
+  growing: { viewBox: '0 0 60 80', height: 104 },
+  evergreen: { viewBox: '0 0 90 130', height: 169 },
+} satisfies Record<Stage, { viewBox: string; height: number }>;
+
+const form = forms[stage];
+
+/** An almond leaf whose base sits at (x, y), pointing along `angle` degrees. */
+const leaf = (x: number, y: number, angle: number, len: number, w: number) => ({
+  transform: `translate(${x} ${y}) rotate(${angle})`,
+  blade: `M0 0 C${len * 0.25} ${-w} ${len * 0.65} ${-w} ${len} 0 C${len * 0.65} ${w * 0.8} ${len * 0.25} ${w * 0.8} 0 0Z`,
+  rib: `M0.5 0 Q${len * 0.5} ${-w * 0.15} ${len * 0.85} 0`,
+});
+
+const saplingLeaves = [
+  leaf(29.8, 64, -162, 16, 5.5),
+  leaf(30.2, 56, -24, 17, 6),
+  leaf(29.6, 46, -150, 15, 5.5),
+  leaf(30.4, 37, -34, 14, 5),
+  leaf(29.9, 28, -140, 11, 4),
+  leaf(30.4, 21, -46, 9, 3.5),
+  leaf(30.5, 16.5, -84, 7, 2.8),
+];
+---
+
+<svg
+  class:list={['plant', `plant--${stage}`, className]}
+  viewBox={form.viewBox}
+  style={`height: ${height ?? `${form.height}px`}`}
+  aria-hidden="true"
+  focusable="false"
+>
+  {
+    stage === 'seedling' && (
+      <g>
+        <path class="ground" d="M8 38.5 Q20 36.6 32 38.5" />
+        <path class="stem" d="M20 38 C20.4 34 19.4 30 20 25" />
+        <path class="leaf leaf--light" d="M20 26 C16 27 10 24.5 8.2 19.5 C12.5 18.6 17.6 20.6 20 26 Z" />
+        <path class="leaf leaf--light" d="M20 24.5 C22.8 21 27.5 18.2 32.2 18.6 C31 23.4 25.6 26 20 24.5 Z" />
+        <path class="rib" d="M19.6 25.6 Q14 22.6 9.6 20" />
+        <path class="rib" d="M20.4 24.2 Q26 20.8 31 19.3" />
+      </g>
+    )
+  }
+  {
+    stage === 'growing' && (
+      <g>
+        <path class="ground" d="M14 78.5 Q30 76 46 78.5" />
+        <path class="stem" d="M30 78 C31 68 28.5 58 30 47 C31.2 38 29 28 30.5 16" />
+        {saplingLeaves.map((l) => (
+          <g transform={l.transform}>
+            <path class="leaf" d={l.blade} />
+            <path class="rib" d={l.rib} />
+          </g>
+        ))}
+      </g>
+    )
+  }
+  {
+    stage === 'evergreen' && (
+      <g>
+        <path class="ground" d="M16 128.5 Q45 125 74 128.5" />
+        <path class="trunk" d="M42 128 L42.6 110 L47.4 110 L48 128 Z" />
+        <path
+          class="leaf leaf--deep"
+          d="M45 62 C38 78 26 96 12 112 Q20 116.5 28 112.5 Q36 117.5 45 113.5 Q54 117.5 62 112.5 Q70 116.5 78 112 C64 96 52 78 45 62 Z"
+        />
+        <path class="hatch" d="M53 92 l6 6 M57 85 l5 5 M50 100 l7 6 M61 99 l5 4" />
+        <path
+          class="leaf leaf--deep"
+          d="M45 38 C39 52 30 68 19 86 Q26 90.5 32 86.5 Q38 91.5 45 87.5 Q52 91.5 58 86.5 Q64 90.5 71 86 C60 68 51 52 45 38 Z"
+        />
+        <path class="hatch" d="M52 66 l5 5 M55 60 l4 4 M49 74 l6 5" />
+        <path
+          class="leaf leaf--deep"
+          d="M45 14 C41 26 34 42 26 60 Q31 64.5 36 60.5 Q40.5 65 45 61.5 Q49.5 65 54 60.5 Q59 64.5 64 60 C56 42 49 26 45 14 Z"
+        />
+        <path class="hatch" d="M50 42 l4 4 M52 49 l4 4" />
+        <path class="leaf leaf--deep" d="M45 4 C43 12 38 22 32 34 Q38.5 38.5 45 35.5 Q51.5 38.5 58 34 C52 22 47 12 45 4 Z" />
+      </g>
+    )
+  }
+</svg>
+
+<style>
+  .plant {
+    width: auto;
+    max-width: none;
+    overflow: visible;
+    fill: none;
+    stroke: var(--ink);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ground {
+    stroke-width: 1;
+    opacity: 0.45;
+  }
+
+  .stem {
+    stroke-width: 1.5;
+  }
+
+  .leaf {
+    fill: var(--leaf);
+    stroke-width: 1.1;
+  }
+
+  .leaf--light {
+    fill: var(--leaf-light);
+  }
+
+  .leaf--deep {
+    fill: var(--leaf-deep);
+    stroke-width: 1.2;
+  }
+
+  .rib {
+    stroke-width: 0.6;
+    opacity: 0.55;
+  }
+
+  .trunk {
+    fill: var(--bark);
+    stroke-width: 1.1;
+  }
+
+  .hatch {
+    stroke: var(--paper-light);
+    stroke-width: 0.8;
+    opacity: 0.4;
+  }
+</style>
