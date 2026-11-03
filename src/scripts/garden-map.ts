@@ -1,5 +1,5 @@
 /**
- * Behavior for the /meander map: open centered on the origin (or on the plant
+ * Behavior for the /ander map: open centered on the origin (or on the plant
  * named in the URL hash), drag to pan with momentum, and keep the legend and the
  * plants pointing at each other. The map is a native scroll container, so
  * trackpads, wheels and touch scroll it without any help from here.

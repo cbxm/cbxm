@@ -8,7 +8,7 @@ export async function getGarden(): Promise<Piece[]> {
   return pieces.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 }
 
-export const pieceHref = (piece: Piece) => `/meander/${piece.id}`;
+export const pieceHref = (piece: Piece) => `/ander/${piece.id}`;
 
 /** Margin of open ground around the outermost plants, in map pixels. */
 const MARGIN = { x: 900, y: 700 };

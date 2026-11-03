@@ -4,46 +4,41 @@ import GardenField from '../components/GardenField.astro';
 import { getGarden } from '../lib/garden';
 
 const pieces = await getGarden();
-
-const elsewhere = [
-  { label: 'email', href: 'mailto:hello@cbxm.me' },
-  { label: 'github', href: 'https://github.com/' },
-];
 ---
 
-<Base>
+<Base description="hi. i’m caden.">
   <div class="home">
     <section class="handshake prose" aria-labelledby="hello">
-      <h1 id="hello">Hi, I'm Caden.</h1>
+      <h1 id="hello">hi. i’m caden.</h1>
       <p>
-        This is a placeholder handshake: a few sentences about who I am and what I'm up to right now, written in my own
-        voice.
+        i live in ogden, utah, with a dog named sophie and a car that has opinions about which way we’re going.
       </p>
       <p>
-        The rest of the site is a garden. Pieces of writing, some with small toys inside, planted where they seem to
-        fit and left to grow.
+        for eight years i climbed trees for a living. now i mostly write software. i’m also starting a tree company,
+        because apparently i can’t leave well enough alone.
       </p>
+      <p>
+        i build systems: for code, for crews, for getting out of bed in the morning. most of them work. some of them
+        are very elaborate ways of avoiding the one thing i’m supposed to be doing. i’m getting better at telling which
+        is which.
+      </p>
+      <p>sometimes i write essays. some are gentle and some are rude. all of them are honest.</p>
+      <p>
+        i like dinner parties, card games, long drives with no route, and the kind of conversation that keeps going
+        after the dishes are done.
+      </p>
+      <p>
+        if you’re a friend, hi. if you’re a stranger, also hi. you probably got here by taking a wrong turn.
+      </p>
+      <p>good. that’s my favorite way to get anywhere.</p>
     </section>
 
-    <a class="glimpse" href="/meander">
+    <a class="glimpse" href="/ander">
       <span class="window" aria-hidden="true">
         <GardenField pieces={pieces} />
       </span>
       <span class="caption">wander into the garden &rarr;</span>
     </a>
-
-    <section class="elsewhere" aria-labelledby="elsewhere-title">
-      <h2 id="elsewhere-title" class="meta">elsewhere</h2>
-      <ul>
-        {
-          elsewhere.map((link) => (
-            <li>
-              <a href={link.href}>{link.label}</a>
-            </li>
-          ))
-        }
-      </ul>
-    </section>
   </div>
 </Base>
 
@@ -108,18 +103,5 @@ const elsewhere = [
 
   .glimpse:hover .caption {
     color: var(--accent);
-  }
-
-  .elsewhere {
-    margin-top: var(--space-6);
-  }
-
-  .elsewhere ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-4);
-    list-style: none;
-    padding: 0;
-    margin-top: var(--space-2);
   }
 </style>
