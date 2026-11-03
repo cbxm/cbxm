@@ -8,9 +8,11 @@ interface Props {
   description?: string;
   /** On wide screens with JS, the page fills the viewport below the header and does not scroll (the map). */
   fullBleed?: boolean;
+  /** The header's sky is a tall band rather than a strip. */
+  tallSky?: boolean;
 }
 
-const { title, description = 'A writing playground that grows.', fullBleed = false } = Astro.props;
+const { title, description = 'A writing playground that grows.', fullBleed = false, tallSky = false } = Astro.props;
 const pageTitle = title ? `${title} · cbxm` : 'cbxm';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const path = Astro.url.pathname;
@@ -43,16 +45,34 @@ const lightScript = inline(`(${lightSky})();`);
     <script is:inline set:html={lightScript} />
   </head>
   <body class:list={{ 'full-bleed': fullBleed }}>
-    <div class="sky" aria-hidden="true">
-      <span class="cloud" style="--x: 8vw; --y: 9%; --s: 1.1; --t: 720s; --o: 0s"></span>
-      <span class="cloud" style="--x: 60vw; --y: 19%; --s: 0.8; --t: 600s; --o: 380s"></span>
-      <span class="cloud" style="--x: 34vw; --y: 31%; --s: 0.6; --t: 900s; --o: 610s"></span>
-    </div>
-    <header class="site-header">
+    <header class:list={['site-header', { 'tall-sky': tallSky }]}>
+      <div class="sky" data-band={tallSky ? 'tall' : 'strip'} aria-hidden="true">
+        <span class="cloud" style="--x: 8vw; --y: 6%; --s: 1.1; --t: 720s; --o: 0s"></span>
+        <span class="cloud" style="--x: 60vw; --y: 22%; --s: 0.8; --t: 600s; --o: 380s"></span>
+        <span class="cloud" style="--x: 34vw; --y: 40%; --s: 0.6; --t: 900s; --o: 610s"></span>
+      </div>
       <a class="wordmark" href="/" aria-label="cbxm, home">cbxm</a>
-      <nav aria-label="Site">
-        <a href="/ander" aria-current={inGarden ? 'page' : undefined}>meander</a>
-      </nav>
+      <div class="header-end">
+        <nav aria-label="Site">
+          <a href="/ander" aria-current={inGarden ? 'page' : undefined}>meander</a>
+        </nav>
+        <button class="theme" type="button" aria-label="theme">
+          <svg class="theme-icon theme-icon--light" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="3" />
+            <path
+              d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M3.4 12.6l1.3-1.3M11.3 4.7l1.3-1.3"
+            />
+          </svg>
+          <svg class="theme-icon theme-icon--dynamic" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="5.5" />
+            <path class="fill" d="M8 2.5a5.5 5.5 0 0 0 0 11z" />
+          </svg>
+          <svg class="theme-icon theme-icon--dark" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M12.8 10A5.6 5.6 0 1 1 6 3.2a4.4 4.4 0 0 0 6.8 6.8z" />
+          </svg>
+        </button>
+      </div>
+      <span class="sky-label" aria-hidden="true" hidden></span>
     </header>
     <main>
       <slot />
@@ -83,6 +103,76 @@ const lightScript = inline(`(${lightSky})();`);
     gap: var(--space-4);
     min-height: var(--header-height);
     padding: var(--space-3) var(--gutter);
+  }
+
+  :global(html[data-sky]) .tall-sky {
+    min-height: var(--sky-band);
+  }
+
+  /* Above the sky, which only takes the pointer over its sun, moon, planets, and figures, and
+     haloed in paper so the stars behind don't break up the letters. */
+  .wordmark,
+  .header-end {
+    position: relative;
+    z-index: 1;
+    text-shadow:
+      0 0 6px var(--paper),
+      0 0 2px var(--paper);
+  }
+
+  .header-end {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* The theme cycles light → dynamic → dark (src/scripts/sky.ts); it needs the bootstrap's data-theme. */
+  .theme {
+    display: none;
+    padding: var(--space-1);
+    margin: calc(-1 * var(--space-1));
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  :global(html[data-theme]) .theme {
+    display: inline-flex;
+  }
+
+  /* `?sky=` previews a time under the dynamic theme, so there is no theme to change. */
+  :global(html[data-sky-preview]) .theme {
+    display: none;
+  }
+
+  .theme:hover {
+    color: var(--ink);
+  }
+
+  .theme-icon {
+    display: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    max-width: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 3px var(--paper));
+  }
+
+  .theme-icon .fill {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  :global(html[data-theme='light']) .theme-icon--light,
+  :global(html[data-theme='dynamic']) .theme-icon--dynamic,
+  :global(html[data-theme='dark']) .theme-icon--dark {
+    display: block;
   }
 
   .wordmark {

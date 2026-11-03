@@ -1,6 +1,8 @@
 /*
- * The sky behind every page (Base.astro's .sky, filled by src/scripts/sky.ts). It shows only
- * once lightSky() has set data-sky, so without JavaScript the page is plain paper.
+ * The sky in the header (Base.astro's .sky, filled by src/scripts/sky.ts): a tall band on the
+ * home page and the map, a strip elsewhere. It shows only once lightSky() has set data-sky, so
+ * without JavaScript the header is plain paper. The horizon sits a little above the band's
+ * bottom edge, and the band fades into the page below it.
  */
 
 .sky {
@@ -8,20 +10,26 @@
 }
 
 html[data-sky] .sky {
+  --horizon: 85%;
   display: block;
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
   background:
     radial-gradient(
-      ellipse 55% 38% at calc(var(--sun-x) * 100%) 100%,
+      ellipse 55% 60% at calc(var(--sun-x) * 100%) var(--horizon),
       color-mix(in oklab, var(--glow-color) calc(var(--glow) * 85%), transparent),
       transparent
     ),
-    linear-gradient(to top, color-mix(in oklab, var(--glow-color) calc(var(--glow) * 45%), transparent), transparent 40%),
-    linear-gradient(to bottom, var(--sky-top), transparent 60%);
+    linear-gradient(
+      to top,
+      transparent,
+      color-mix(in oklab, var(--glow-color) calc(var(--glow) * 45%), transparent) calc(100% - var(--horizon)),
+      transparent 60%
+    ),
+    linear-gradient(to bottom, var(--sky-top), transparent var(--horizon));
 }
 
 .sky-bodies,
@@ -38,6 +46,43 @@ html[data-sky] .sky {
   stroke: var(--star-line);
   stroke-width: 0.8;
   stroke-linecap: round;
+  transition:
+    stroke 0.2s,
+    stroke-width 0.2s;
+}
+
+/* Flattened into the strip, the figures' lines are noise; they show only for the figure under the pointer. */
+.sky[data-band='strip'] .sky-lines line:not(.is-lit) {
+  visibility: hidden;
+}
+
+.sky-lines line.is-lit {
+  stroke: var(--ink-soft);
+  stroke-width: 1.2;
+}
+
+.sky-stars circle {
+  fill: var(--tint);
+}
+
+.tint-0 {
+  --tint: var(--star-0);
+}
+
+.tint-1 {
+  --tint: var(--star-1);
+}
+
+.tint-2 {
+  --tint: var(--star-2);
+}
+
+.tint-3 {
+  --tint: var(--star-3);
+}
+
+.tint-4 {
+  --tint: var(--star-4);
 }
 
 .sky-twinkle {
@@ -56,6 +101,24 @@ html[data-sky] .sky {
   box-shadow: 0 0 calc(2.5 * var(--r)) color-mix(in srgb, var(--tint) 45%, transparent);
 }
 
+.sky-twinkle.is-lit::before {
+  box-shadow:
+    0 0 calc(2.5 * var(--r)) color-mix(in srgb, var(--tint) 45%, transparent),
+    0 0 0 5px var(--sky-halo);
+}
+
+.sky-stars circle.is-lit,
+.sky-planet.is-lit {
+  stroke: var(--sky-halo);
+  stroke-opacity: 1;
+  stroke-width: 10;
+}
+
+.sky-stars circle,
+.sky-planet {
+  transition: stroke-width 0.2s;
+}
+
 .sky-planet {
   stroke: currentColor;
   stroke-opacity: 0.25;
@@ -64,23 +127,35 @@ html[data-sky] .sky {
 }
 
 .sky-planet--mercury {
-  color: #d8cfc0;
+  color: var(--planet-mercury);
 }
 
 .sky-planet--venus {
-  color: #fff8e6;
+  color: var(--planet-venus);
 }
 
 .sky-planet--mars {
-  color: #f08a5d;
+  color: var(--planet-mars);
 }
 
 .sky-planet--jupiter {
-  color: #f6e7c8;
+  color: var(--planet-jupiter);
 }
 
 .sky-planet--saturn {
-  color: #ead39c;
+  color: var(--planet-saturn);
+}
+
+.sky-planet--uranus {
+  color: var(--planet-uranus);
+}
+
+.sky-planet--neptune {
+  color: var(--planet-neptune);
+}
+
+.sky-planet--pluto {
+  color: var(--planet-pluto);
 }
 
 .sky-sun-glow {
@@ -121,6 +196,51 @@ html[data-sky] .sky {
   stroke: var(--moon-rim);
 }
 
+.sky-sun-disc,
+.sky-moon-rim {
+  transition: stroke-width 0.2s;
+}
+
+.sky-sun.is-lit .sky-sun-disc,
+.sky-moon.is-lit .sky-moon-rim {
+  stroke: var(--sky-halo);
+  stroke-width: 10;
+}
+
+/* Generous invisible targets over each body and figure. */
+.sky-hits {
+  fill: transparent;
+  stroke: transparent;
+  cursor: default;
+}
+
+.sky-hits circle {
+  pointer-events: all;
+}
+
+.sky-hits line {
+  stroke-width: 18;
+  stroke-linecap: round;
+  pointer-events: stroke;
+}
+
+/* Base.astro puts this beside the sky, above the wordmark, so a label is never under it. */
+.sky-label {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  font-size: var(--text-sm);
+  font-style: italic;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--ink);
+  text-shadow:
+    0 0 4px var(--paper),
+    0 0 2px var(--paper);
+  pointer-events: none;
+}
+
 /*
  * Clouds by day and twilight. Each drifts across on its own period (--t, a divisor of an hour),
  * offset by --sky-clock so a new page finds them where the last one left them.
@@ -134,8 +254,8 @@ html[data-sky] .cloud {
   position: absolute;
   top: var(--y);
   left: 0;
-  width: calc(20rem * var(--s));
-  height: calc(5.5rem * var(--s));
+  height: calc(min(var(--band-h) * 0.3, 9vw) * var(--s));
+  aspect-ratio: 3.6;
   translate: var(--x) 0;
   opacity: calc(0.85 - 0.35 * var(--low));
   background:
@@ -143,6 +263,14 @@ html[data-sky] .cloud {
     radial-gradient(closest-side, var(--cloud) 40%, transparent) 34% 30% / 40% 92% no-repeat,
     radial-gradient(closest-side, var(--cloud) 40%, transparent) 62% 45% / 36% 80% no-repeat,
     radial-gradient(closest-side, var(--cloud) 45%, transparent) 50% 85% / 92% 45% no-repeat;
+}
+
+.sky[data-band='tall'] {
+  --band-h: var(--sky-band);
+}
+
+.sky[data-band='strip'] {
+  --band-h: var(--header-height);
 }
 
 html[data-sky='night'] .cloud {
@@ -163,7 +291,7 @@ html[data-sky='night'] .cloud {
 
 @keyframes drift {
   from {
-    translate: calc(-20rem * var(--s)) 0;
+    translate: -100% 0;
   }
   to {
     translate: 100vw 0;

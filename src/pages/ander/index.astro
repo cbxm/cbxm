@@ -8,7 +8,7 @@ const pieces = await getGarden();
 const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 ---
 
-<Base title="meander" description="The garden: everything written here, planted on a map and growing." fullBleed>
+<Base title="meander" description="The garden: everything written here, planted on a map and growing." fullBleed tallSky>
   <div class="meander">
     <div class="map" aria-hidden="true" tabindex="-1">
       <GardenField pieces={pieces} interactive />
