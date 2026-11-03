@@ -1,12 +1,12 @@
 # cbxm.me
 
-A writing and interactivity playground that grows. Every piece lives in the garden at `/meander` (read it as cbxm.me/ander), planted on a hand-placed map where its stage shows up as the size of its plant: seedling, growing, evergreen.
+A writing and interactivity playground that grows. Every piece lives in the garden at `/ander` (read it as cbxm meander), planted on a hand-placed map where its stage shows up as the size of its plant: seedling, growing, evergreen.
 
 Astro + MDX, built to static files and served by Cloudflare Workers static assets.
 
 ## Add a piece
 
-Make one file, `src/content/garden/<slug>.mdx`. The slug becomes the URL: `/meander/<slug>`.
+Make one file, `src/content/garden/<slug>.mdx`. The slug becomes the URL: `/ander/<slug>`.
 
 ```mdx
 ---
@@ -57,11 +57,7 @@ bun run deploy:check    # build and validate without uploading or credentials
 
 `cf deploy` on its own won't work here: cf detects Astro and expects the `@astrojs/cloudflare` adapter, which a static site doesn't need. The scripts build with Astro, package `dist/` with `cf-wrangler build`, and deploy that with `cf deploy --prebuilt`.
 
-The first deploy lands on `cbxm-me.<your-subdomain>.workers.dev`. Check it there, then point the domain at it by adding to the `worker` block in `cloudflare.config.ts`:
-
-```ts
-domains: ["cbxm.me"],
-```
+The site serves `cbxm.me` and `www.cbxm.me` (the `domains` list in `cloudflare.config.ts`) and also `cbxm-me.cbxm.workers.dev`. Cloudflare manages those DNS records; a hand-made record on either name makes the deploy fail.
 
 ### CI
 
