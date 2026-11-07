@@ -1,4 +1,4 @@
-import { defineConfig } from "cf/config";
+import { bindings, defineConfig } from "cf/config";
 
 export default defineConfig({
   worker: {
@@ -6,6 +6,9 @@ export default defineConfig({
     compatibilityDate: "2026-10-06",
     domains: ["cbxm.me", "www.cbxm.me"],
     entrypoint: "./src/worker.ts",
+    env: {
+      MES_ORIGIN_SECRET: bindings.secret(),
+    },
     assets: {
       htmlHandling: "drop-trailing-slash",
       notFoundHandling: "404-page",
