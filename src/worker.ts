@@ -16,6 +16,8 @@ const FRESH_FOR = "x-mes-fresh-for";
 const CLIENT_CACHE_CONTROL = "x-mes-cache-control";
 const ORIGIN_TAGS = "x-mes-cache-tags";
 const ORIGIN_SECRET = "x-mes-origin-secret";
+/** Set by the app on every response. Traefik and Cloudflare errors don't have it. */
+const APP_MARKER = "x-mes-app";
 
 interface Env {
   /** Shared with the app, which refuses requests that don't carry it. */
@@ -44,9 +46,13 @@ function forClient(response: Response, cacheState: string): Response {
   const out = new Response(response.body, response);
   const clientCacheControl = out.headers.get(CLIENT_CACHE_CONTROL);
   if (clientCacheControl) out.headers.set("cache-control", clientCacheControl);
-  for (const header of [STORED_AT, FRESH_FOR, CLIENT_CACHE_CONTROL, ORIGIN_TAGS, "cache-tag"]) {
+  const internal = [STORED_AT, FRESH_FOR, CLIENT_CACHE_CONTROL, ORIGIN_TAGS, APP_MARKER, "cache-tag"];
+  for (const header of internal) {
     out.headers.delete(header);
   }
+  // Responses that didn't come from the app have none of its headers.
+  out.headers.set("content-security-policy", "frame-ancestors 'none'");
+  out.headers.set("x-frame-options", "DENY");
   out.headers.set("x-mes-cache", cacheState);
   return out;
 }
@@ -83,10 +89,15 @@ async function fetchThroughCache(
   } catch (error) {
     if (cached) return forClient(cached, "stale");
     console.error("mes origin unreachable", error);
-    return new Response("mes is unreachable", { status: 503 });
+    return forClient(new Response("mes is unreachable", { status: 503 }), "bypass");
   }
 
-  if (response.status >= 500 && cached) return forClient(cached, "stale");
+  // While the container restarts, Traefik answers for it, with a 404 when the
+  // route is gone and a 502 when the app isn't listening yet. Only the app can
+  // say a page no longer exists.
+  const appFailed = !response.headers.has(APP_MARKER) || response.status >= 500;
+  if (appFailed) return forClient(cached ?? response, cached ? "stale" : "bypass");
+
   if (response.status === 404 && cached) ctx.waitUntil(cache.delete(cacheKey));
 
   const freshFor = edgeFreshness(response);
