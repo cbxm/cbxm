@@ -17,6 +17,7 @@ Caden's personal site: a writing garden where pieces can carry bespoke interacti
 - `src/pages/ander/`: the garden. The route is `/ander` on purpose: cbxm.me/ander reads as "cbxm meander". The nav label and title stay "meander". Never rename the route to `/meander`.
 - `src/components/GardenField.astro`, `Plant.astro`, `src/scripts/garden-map.ts`: the map.
 - `src/styles/tokens.css`: colours, spacing, and type as custom properties. Plain CSS, no Tailwind.
+- `src/worker.ts`: the only server code. It runs for `/mes` and `/mes/*` (`runWorkerFirst`) and forwards them to the app on lynx (repo `cbxm/mes`) at `mes-origin.cbxm.me`, caching anonymous GETs. Every other path is static assets and never reaches it. Astro itself stays static.
 
 ## Gotchas
 
@@ -25,6 +26,8 @@ Caden's personal site: a writing garden where pieces can carry bespoke interacti
 - **Drafts.** `draft: true` pieces appear in `bun dev` and are absent from `bun run build`. Anything that lists pieces must go through `getGarden()`.
 - **Map placement.** `x, y` is in pixels from the origin, and positive y points down. The map opens centred on (0,0), in the space to the right of the legend panel, and the landing page shows a window around (0,0). Plant a piece near the pieces it links to. The field grows to fit, so nothing is out of reach.
 - **Never run `cf init` / `cf build` here.** On an Astro project they install the SSR adapter and turn the static site into a server Worker. The pipeline is `astro build` → `cf-wrangler build` → `cf deploy --prebuilt` (the `build:cf` and `deploy` scripts).
+- **`/mes` edge cache.** It is the Cache API, so `cache.delete` only reaches one data center and the cache is purged by tag from the app. Entries are fresh for at most 7 days and kept for 30, so pages keep serving while lynx is down and a 404 from the origin drops them. `x-mes-cache` on the response says `hit`, `miss`, `stale`, or `bypass`.
+- **`/mes` origin secret.** The Worker sends `MES_ORIGIN_SECRET` in `x-mes-origin-secret` and the app answers 403 without it. It is set with `cf workers secrets update MES_ORIGIN_SECRET`, must match `MES_ORIGIN_SECRET` in the app's `.env`, and survives deploys. For `cf-wrangler dev`, put it in `.dev.vars`.
 - **Cloudflare profile.** This is the personal `default` cf profile, not `x2u`.
 
 ## Develop and verify
